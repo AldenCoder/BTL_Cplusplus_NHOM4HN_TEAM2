@@ -309,7 +309,7 @@ cp -r data/ backup/manual_backup_$(date +%Y%m%d)
 
 ### Liên hệ hỗ trợ:
 - Email nhóm: 
-- Repository: [https://github.com/team2c/wallet-system](https://github.com/team2c)
+- Repository: [https://github.com/team2c/wallet-system](https://github.com/team2c/wallet-system)
 
 ### License:
 MIT License - Xem file LICENSE để biết thêm chi tiết.

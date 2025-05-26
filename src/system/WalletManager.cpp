@@ -19,20 +19,38 @@ WalletManager::WalletManager(std::shared_ptr<DataManager> dataManager,
     : dataManager(dataManager), otpManager(otpManager) {
 }
 
-bool WalletManager::initialize() {    try {
-        // Khởi tạo ví tổng
-        masterWallet = std::unique_ptr<MasterWallet>(new MasterWallet(10000000.0)); // 10 triệu điểm ban đầu
-          // Tải tất cả ví từ storage vào cache
+bool WalletManager::initialize() {
+    try {
+        std::cout << "[DEBUG] Starting WalletManager initialization..." << std::endl;
+        
+        // Initialize master wallet
+        masterWallet = std::unique_ptr<MasterWallet>(new MasterWallet(10000000.0)); // 10 million initial points
+        std::cout << "[DEBUG] Master wallet created successfully" << std::endl;
+        
+        // Load all wallets from storage into cache
         auto wallets = dataManager->loadAllWallets();
-        for (const auto& wallet : wallets) {
-            // Convert unique_ptr to shared_ptr
-            walletCache[wallet->getId()] = std::shared_ptr<Wallet>(std::move(const_cast<std::unique_ptr<Wallet>&>(wallet)));
+        std::cout << "[DEBUG] Loaded " << wallets.size() << " wallets from storage" << std::endl;
+        
+        for (auto& wallet : wallets) {
+            if (wallet) {
+                std::string walletId = wallet->getId();
+                std::cout << "[DEBUG] Processing wallet " << walletId << std::endl;
+                
+                // Convert unique_ptr to shared_ptr properly
+                std::shared_ptr<Wallet> sharedWallet(wallet.release());
+                walletCache[walletId] = sharedWallet;
+                
+                std::cout << "[DEBUG] Added wallet " << walletId << " to cache" << std::endl;
+            } else {
+                std::cout << "[DEBUG] Warning: null wallet found in loadAllWallets result" << std::endl;
+            }
         }
 
+        std::cout << "[DEBUG] WalletManager initialization completed successfully" << std::endl;
         return true;
     }
     catch (const std::exception& e) {
-        std::cerr << "Lỗi khởi tạo WalletManager: " << e.what() << std::endl;
+        std::cerr << "[ERROR] WalletManager initialization failed: " << e.what() << std::endl;
         return false;
     }
 }

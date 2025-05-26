@@ -107,27 +107,52 @@ bool DataManager::saveUser(const User& user) {
 
 std::unique_ptr<User> DataManager::loadUser(const std::string& username) {
     try {
-        std::ifstream file(usersFile);
-        if (!file.is_open()) {
+        std::string content = readJsonFile(usersFile);
+        if (content.empty()) {
             return nullptr;
         }
         
-        std::string line;
-        while (std::getline(file, line)) {            size_t delimPos = line.find('|');
-            if (delimPos != std::string::npos) {
-                std::string fileUsername = line.substr(0, delimPos);
-                if (fileUsername == username) {
-                    std::string jsonData = line.substr(delimPos + 1);
-                    // In practice would parse JSON, here temporarily returns nullptr
-                    file.close();
-                    return User::fromJson(jsonData);
-                }
-            }
+        // Parse JSON content to find users array
+        size_t usersPos = content.find("\"users\":");
+        if (usersPos == std::string::npos) {
+            return nullptr;
         }
         
-        file.close();
+        // Find the user with matching username
+        size_t pos = usersPos;
+        while ((pos = content.find("\"username\":", pos)) != std::string::npos) {
+            size_t valueStart = content.find("\"", pos + 11);
+            size_t valueEnd = content.find("\"", valueStart + 1);
+            
+            if (valueStart != std::string::npos && valueEnd != std::string::npos) {
+                std::string foundUsername = content.substr(valueStart + 1, valueEnd - valueStart - 1);
+                
+                if (foundUsername == username) {
+                    // Find the start and end of this user object
+                    size_t objStart = content.rfind("{", pos);
+                    
+                    // Find the complete object (handle nested braces)
+                    int braceCount = 1;
+                    size_t searchPos = objStart + 1;
+                    while (searchPos < content.length() && braceCount > 0) {
+                        if (content[searchPos] == '{') braceCount++;
+                        else if (content[searchPos] == '}') braceCount--;
+                        searchPos++;
+                    }
+                    size_t objEnd = searchPos - 1;
+                    
+                    if (objStart != std::string::npos && objEnd != std::string::npos) {
+                        std::string userJson = content.substr(objStart, objEnd - objStart + 1);
+                        return User::fromJson(userJson);
+                    }
+                }
+            }
+            pos = valueEnd;
+        }
+        
         return nullptr;
-          } catch (const std::exception& e) {
+        
+    } catch (const std::exception& e) {
         std::cerr << "Error loading user: " << e.what() << std::endl;
         return nullptr;
     }
@@ -137,29 +162,49 @@ std::vector<std::unique_ptr<User>> DataManager::loadAllUsers() {
     std::vector<std::unique_ptr<User>> users;
     
     try {
-        std::ifstream file(usersFile);
-        if (!file.is_open()) {
+        std::string content = readJsonFile(usersFile);
+        if (content.empty()) {
             return users;
         }
         
-        std::string line;
-        while (std::getline(file, line)) {
-            size_t delimPos = line.find('|');
-            if (delimPos != std::string::npos) {
-                std::string jsonData = line.substr(delimPos + 1);
-                auto user = User::fromJson(jsonData);
+        // Parse JSON content to find users array
+        size_t usersPos = content.find("\"users\":");
+        if (usersPos == std::string::npos) {
+            return users;
+        }
+        
+        // Find all user objects
+        size_t pos = usersPos;
+        while ((pos = content.find("\"userId\":", pos)) != std::string::npos) {
+            // Find the start and end of this user object
+            size_t objStart = content.rfind("{", pos);
+            
+            // Find the complete object (handle nested braces)
+            int braceCount = 1;
+            size_t searchPos = objStart + 1;
+            while (searchPos < content.length() && braceCount > 0) {
+                if (content[searchPos] == '{') braceCount++;
+                else if (content[searchPos] == '}') braceCount--;
+                searchPos++;
+            }
+            size_t objEnd = searchPos - 1;
+            
+            if (objStart != std::string::npos && objEnd != std::string::npos) {
+                std::string userJson = content.substr(objStart, objEnd - objStart + 1);
+                auto user = User::fromJson(userJson);
                 if (user) {
                     users.push_back(std::move(user));
                 }
             }
+            
+            pos = objEnd;
         }
         
-        file.close();
-        
     } catch (const std::exception& e) {
-        std::cerr << "Lỗi tải tất cả users: " << e.what() << std::endl;
+        std::cerr << "Error loading all users: " << e.what() << std::endl;
     }
-      return users;
+      
+    return users;
 }
 
 // Additional methods for interface compatibility
@@ -169,29 +214,53 @@ std::unique_ptr<User> DataManager::loadUserByUsername(const std::string& usernam
 
 std::unique_ptr<User> DataManager::loadUserById(const std::string& userId) {
     try {
-        std::ifstream file(usersFile);
-        if (!file.is_open()) {
+        std::string content = readJsonFile(usersFile);
+        if (content.empty()) {
             return nullptr;
         }
         
-        std::string line;
-        while (std::getline(file, line)) {
-            size_t delimPos = line.find('|');
-            if (delimPos != std::string::npos) {
-                std::string jsonData = line.substr(delimPos + 1);
-                auto user = User::fromJson(jsonData);
-                if (user && user->getId() == userId) {
-                    file.close();
-                    return user;
-                }
-            }
+        // Parse JSON content to find users array
+        size_t usersPos = content.find("\"users\":");
+        if (usersPos == std::string::npos) {
+            return nullptr;
         }
         
-        file.close();
+        // Find the user with matching userId
+        size_t pos = usersPos;
+        while ((pos = content.find("\"userId\":", pos)) != std::string::npos) {
+            size_t valueStart = content.find("\"", pos + 9);
+            size_t valueEnd = content.find("\"", valueStart + 1);
+            
+            if (valueStart != std::string::npos && valueEnd != std::string::npos) {
+                std::string foundUserId = content.substr(valueStart + 1, valueEnd - valueStart - 1);
+                
+                if (foundUserId == userId) {
+                    // Find the start and end of this user object
+                    size_t objStart = content.rfind("{", pos);
+                    
+                    // Find the complete object (handle nested braces)
+                    int braceCount = 1;
+                    size_t searchPos = objStart + 1;
+                    while (searchPos < content.length() && braceCount > 0) {
+                        if (content[searchPos] == '{') braceCount++;
+                        else if (content[searchPos] == '}') braceCount--;
+                        searchPos++;
+                    }
+                    size_t objEnd = searchPos - 1;
+                    
+                    if (objStart != std::string::npos && objEnd != std::string::npos) {
+                        std::string userJson = content.substr(objStart, objEnd - objStart + 1);
+                        return User::fromJson(userJson);
+                    }
+                }
+            }
+            pos = valueEnd;
+        }
+        
         return nullptr;
         
     } catch (const std::exception& e) {
-        std::cerr << "Lỗi tải user theo ID: " << e.what() << std::endl;
+        std::cerr << "Error loading user by ID: " << e.what() << std::endl;
         return nullptr;
     }
 }
@@ -292,29 +361,54 @@ bool DataManager::saveWallet(const Wallet& wallet) {
 
 std::unique_ptr<Wallet> DataManager::loadWallet(const std::string& walletId) {
     try {
-        std::ifstream file(walletsFile);
-        if (!file.is_open()) {
+        std::string content = readJsonFile(walletsFile);
+        if (content.empty()) {
             return nullptr;
         }
         
-        std::string line;
-        while (std::getline(file, line)) {
-            size_t delimPos = line.find('|');
-            if (delimPos != std::string::npos) {
-                std::string fileWalletId = line.substr(0, delimPos);
-                if (fileWalletId == walletId) {
-                    std::string jsonData = line.substr(delimPos + 1);
-                    file.close();
-                    return Wallet::fromJson(jsonData);
-                }
-            }
+        // Parse JSON content to find wallets array
+        size_t walletsPos = content.find("\"wallets\":");
+        if (walletsPos == std::string::npos) {
+            return nullptr;
         }
         
-        file.close();
+        // Find the wallet with matching walletId
+        size_t pos = walletsPos;
+        while ((pos = content.find("\"walletId\":", pos)) != std::string::npos) {
+            size_t valueStart = content.find("\"", pos + 11);
+            size_t valueEnd = content.find("\"", valueStart + 1);
+            
+            if (valueStart != std::string::npos && valueEnd != std::string::npos) {
+                std::string foundWalletId = content.substr(valueStart + 1, valueEnd - valueStart - 1);
+                
+                if (foundWalletId == walletId) {
+                    // Find the start and end of this wallet object
+                    size_t objStart = content.rfind("{", pos);
+                    size_t objEnd = content.find("}", pos);
+                    
+                    // Find the complete object (handle nested braces)
+                    int braceCount = 1;
+                    size_t searchPos = objStart + 1;
+                    while (searchPos < content.length() && braceCount > 0) {
+                        if (content[searchPos] == '{') braceCount++;
+                        else if (content[searchPos] == '}') braceCount--;
+                        searchPos++;
+                    }
+                    objEnd = searchPos - 1;
+                    
+                    if (objStart != std::string::npos && objEnd != std::string::npos) {
+                        std::string walletJson = content.substr(objStart, objEnd - objStart + 1);
+                        return Wallet::fromJson(walletJson);
+                    }
+                }
+            }
+            pos = valueEnd;
+        }
+        
         return nullptr;
         
     } catch (const std::exception& e) {
-        std::cerr << "Lỗi tải wallet: " << e.what() << std::endl;
+        std::cerr << "Error loading wallet: " << e.what() << std::endl;
         return nullptr;
     }
 }
@@ -323,27 +417,46 @@ std::vector<std::unique_ptr<Wallet>> DataManager::loadAllWallets() {
     std::vector<std::unique_ptr<Wallet>> wallets;
     
     try {
-        std::ifstream file(walletsFile);
-        if (!file.is_open()) {
+        std::string content = readJsonFile(walletsFile);
+        if (content.empty()) {
             return wallets;
         }
         
-        std::string line;
-        while (std::getline(file, line)) {
-            size_t delimPos = line.find('|');
-            if (delimPos != std::string::npos) {
-                std::string jsonData = line.substr(delimPos + 1);
-                auto wallet = Wallet::fromJson(jsonData);
+        // Parse JSON content to find wallets array
+        size_t walletsPos = content.find("\"wallets\":");
+        if (walletsPos == std::string::npos) {
+            return wallets;
+        }
+        
+        // Find all wallet objects
+        size_t pos = walletsPos;
+        while ((pos = content.find("\"walletId\":", pos)) != std::string::npos) {
+            // Find the start and end of this wallet object
+            size_t objStart = content.rfind("{", pos);
+            
+            // Find the complete object (handle nested braces)
+            int braceCount = 1;
+            size_t searchPos = objStart + 1;
+            while (searchPos < content.length() && braceCount > 0) {
+                if (content[searchPos] == '{') braceCount++;
+                else if (content[searchPos] == '}') braceCount--;
+                searchPos++;
+            }
+            size_t objEnd = searchPos - 1;
+            
+            if (objStart != std::string::npos && objEnd != std::string::npos) {
+                std::string walletJson = content.substr(objStart, objEnd - objStart + 1);
+                auto wallet = Wallet::fromJson(walletJson);
                 if (wallet) {
                     wallets.push_back(std::move(wallet));
                 }
             }
+            
+            pos = objEnd;
         }
         
-        file.close();
-        
     } catch (const std::exception& e) {
-        std::cerr << "Lỗi tải tất cả wallets: " << e.what() << std::endl;
+        std::cerr << "Error loading all wallets: " << e.what() << std::endl;
     }
     
     return wallets;
@@ -427,29 +540,56 @@ std::shared_ptr<Wallet> DataManager::loadWalletByUserId(const std::string& userI
 
 std::shared_ptr<Wallet> DataManager::loadWalletByOwner_shared(const std::string& ownerId) {
     try {
-        std::ifstream file(walletsFile);
-        if (!file.is_open()) {
+        std::string content = readJsonFile(walletsFile);
+        if (content.empty()) {
             return nullptr;
         }
         
-        std::string line;
-        while (std::getline(file, line)) {
-            size_t delimPos = line.find('|');
-            if (delimPos != std::string::npos) {
-                std::string jsonData = line.substr(delimPos + 1);
-                auto unique_wallet = Wallet::fromJson(jsonData);
-                if (unique_wallet && unique_wallet->getOwnerId() == ownerId) {
-                    file.close();
-                    return std::shared_ptr<Wallet>(unique_wallet.release());
-                }
-            }
+        // Parse JSON content to find wallets array
+        size_t walletsPos = content.find("\"wallets\":");
+        if (walletsPos == std::string::npos) {
+            return nullptr;
         }
         
-        file.close();
+        // Find the wallet with matching ownerId
+        size_t pos = walletsPos;
+        while ((pos = content.find("\"ownerId\":", pos)) != std::string::npos) {
+            size_t valueStart = content.find("\"", pos + 10);
+            size_t valueEnd = content.find("\"", valueStart + 1);
+            
+            if (valueStart != std::string::npos && valueEnd != std::string::npos) {
+                std::string foundOwnerId = content.substr(valueStart + 1, valueEnd - valueStart - 1);
+                
+                if (foundOwnerId == ownerId) {
+                    // Find the start and end of this wallet object
+                    size_t objStart = content.rfind("{", pos);
+                    
+                    // Find the complete object (handle nested braces)
+                    int braceCount = 1;
+                    size_t searchPos = objStart + 1;
+                    while (searchPos < content.length() && braceCount > 0) {
+                        if (content[searchPos] == '{') braceCount++;
+                        else if (content[searchPos] == '}') braceCount--;
+                        searchPos++;
+                    }
+                    size_t objEnd = searchPos - 1;
+                    
+                    if (objStart != std::string::npos && objEnd != std::string::npos) {
+                        std::string walletJson = content.substr(objStart, objEnd - objStart + 1);
+                        auto unique_wallet = Wallet::fromJson(walletJson);
+                        if (unique_wallet) {
+                            return std::shared_ptr<Wallet>(unique_wallet.release());
+                        }
+                    }
+                }
+            }
+            pos = valueEnd;
+        }
+        
         return nullptr;
         
     } catch (const std::exception& e) {
-        std::cerr << "Lỗi tải wallet by owner: " << e.what() << std::endl;
+        std::cerr << "Error loading wallet by owner: " << e.what() << std::endl;
         return nullptr;
     }
 }

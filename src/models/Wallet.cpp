@@ -4,6 +4,7 @@
  * @author Team 2C
  */
 
+#include <iostream>
 #include "Wallet.h"
 #include "../security/SecurityUtils.h"
 #include <sstream>
@@ -212,9 +213,65 @@ std::string Wallet::toJson() const {
 }
 
 std::unique_ptr<Wallet> Wallet::fromJson(const std::string& json) {
-    // This is a simple implementation, in practice should use JSON library
-    // Temporarily return nullptr
-    return nullptr;
+    try {
+        // Helper function to extract string value from JSON
+        auto extractString = [&json](const std::string& key) -> std::string {
+            std::string searchKey = "\"" + key + "\": \"";
+            size_t start = json.find(searchKey);
+            if (start == std::string::npos) return "";
+            start += searchKey.length();
+            size_t end = json.find("\"", start);
+            if (end == std::string::npos) return "";
+            return json.substr(start, end - start);
+        };
+        
+        // Helper function to extract numeric/boolean value from JSON
+        auto extractValue = [&json](const std::string& key) -> std::string {
+            std::string searchKey = "\"" + key + "\": ";
+            size_t start = json.find(searchKey);
+            if (start == std::string::npos) return "";
+            start += searchKey.length();
+            size_t end = json.find_first_of(",}\n", start);
+            if (end == std::string::npos) return "";
+            return json.substr(start, end - start);
+        };
+        
+        // Extract basic wallet info
+        std::string walletId = extractString("walletId");
+        std::string ownerId = extractString("ownerId");
+        std::string balanceStr = extractValue("balance");
+        
+        if (walletId.empty() || ownerId.empty()) {
+            return nullptr;
+        }
+        
+        double balance = balanceStr.empty() ? 0.0 : std::stod(balanceStr);
+        
+        // Create wallet object
+        auto wallet = std::unique_ptr<Wallet>(new Wallet(walletId, ownerId, balance));
+        
+        // Extract isLocked
+        std::string isLockedStr = extractValue("isLocked");
+        if (!isLockedStr.empty()) {
+            wallet->setLocked(isLockedStr == "true");
+        }
+        
+        // Extract createdAt timestamp
+        std::string createdAtStr = extractValue("createdAt");
+        if (!createdAtStr.empty()) {
+            auto createdTime = std::chrono::seconds(std::stoll(createdAtStr));
+            wallet->createdAt = std::chrono::system_clock::time_point(createdTime);
+        }
+        
+        // Extract transactions (simplified - just clear the initial transaction)
+        wallet->transactions.clear();
+        
+        return wallet;
+        
+    } catch (const std::exception& e) {
+        std::cerr << "Error parsing Wallet JSON: " << e.what() << std::endl;
+        return nullptr;
+    }
 }
 
 std::string Wallet::generateTransactionId() {
