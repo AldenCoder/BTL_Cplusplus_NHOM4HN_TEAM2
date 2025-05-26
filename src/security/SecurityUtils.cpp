@@ -1,6 +1,6 @@
 /**
  * @file SecurityUtils.cpp
- * @brief Implementation các tiện ích bảo mật
+ * @brief Implementation of security utilities
  * @author Team 2C
  */
 
@@ -11,13 +11,13 @@
 #include <functional>  // For std::hash
 // Removed OpenSSL includes for simple compilation
 
-// Khởi tạo static members
+// Initialize static members
 std::mt19937 SecurityUtils::rng;
 std::unordered_map<std::string, std::pair<std::string, std::chrono::system_clock::time_point>> SecurityUtils::otpStore;
 const int SecurityUtils::OTP_VALIDITY_MINUTES;
 
 void SecurityUtils::initialize() {
-    // Khởi tạo random seed
+    // Initialize random seed
     std::random_device rd;
     rng.seed(rd());
 }
@@ -25,18 +25,18 @@ void SecurityUtils::initialize() {
 std::string SecurityUtils::hashPassword(const std::string& password, const std::string& salt) {
     std::string actualSalt = salt.empty() ? generateSalt() : salt;
     
-    // Kết hợp password và salt
+    // Combine password and salt
     std::string combined = password + actualSalt;
     
-    // Tính hash SHA256
+    // Calculate SHA256 hash
     std::string hash = sha256(combined);
     
-    // Trả về format: salt$hash
+    // Return format: salt$hash
     return actualSalt + "$" + hash;
 }
 
 bool SecurityUtils::verifyPassword(const std::string& password, const std::string& hashedPassword) {
-    // Tách salt và hash
+    // Split salt and hash
     size_t dollarPos = hashedPassword.find('$');
     if (dollarPos == std::string::npos) {
         return false;
@@ -45,7 +45,7 @@ bool SecurityUtils::verifyPassword(const std::string& password, const std::strin
     std::string salt = hashedPassword.substr(0, dollarPos);
     std::string storedHash = hashedPassword.substr(dollarPos + 1);
     
-    // Hash password với salt đã lưu
+    // Hash password with stored salt
     std::string testHash = sha256(password + salt);
     
     return testHash == storedHash;
@@ -73,11 +73,11 @@ std::string SecurityUtils::generatePassword(int length, bool includeSpecialChars
 }
 
 std::string SecurityUtils::generateOTP(const std::string& userId, const std::string& purpose) {
-    // Tạo OTP 6 chữ số
+    // Generate 6-digit OTP
     std::uniform_int_distribution<> dist(100000, 999999);
     std::string otp = std::to_string(dist(rng));
     
-    // Lưu OTP với thời gian hết hạn
+    // Store OTP with expiration time
     auto expiry = std::chrono::system_clock::now() + 
                   std::chrono::minutes(OTP_VALIDITY_MINUTES);
     
@@ -95,17 +95,16 @@ bool SecurityUtils::verifyOTP(const std::string& userId, const std::string& otpC
         return false;
     }
     
-    // Kiểm tra thời gian hết hạn
+    // Check expiration time
     auto now = std::chrono::system_clock::now();
     if (now > it->second.second) {
         otpStore.erase(it);
         return false;
     }
-    
-    // Kiểm tra mã OTP
+      // Check OTP code
     bool valid = (it->second.first == otpCode);
     
-    // Xóa OTP sau khi sử dụng (one-time)
+    // Delete OTP after use (one-time)
     if (valid) {
         otpStore.erase(it);
     }
@@ -114,7 +113,7 @@ bool SecurityUtils::verifyOTP(const std::string& userId, const std::string& otpC
 }
 
 std::string SecurityUtils::generateUUID() {
-    // UUID version 4 đơn giản
+    // Simple UUID version 4
     std::uniform_int_distribution<> dist(0, 15);
     std::uniform_int_distribution<> dist2(8, 11);
     
@@ -173,8 +172,7 @@ std::string SecurityUtils::encrypt(const std::string& data, const std::string& k
         char keyChar = key[i % key.length()];
         encrypted += data[i] ^ keyChar;
     }
-    
-    // Chuyển đổi thành hex
+      // Convert to hex
     std::ostringstream ss;
     for (unsigned char c : encrypted) {
         ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(c);
@@ -184,7 +182,7 @@ std::string SecurityUtils::encrypt(const std::string& data, const std::string& k
 }
 
 std::string SecurityUtils::decrypt(const std::string& encryptedData, const std::string& key) {
-    // Chuyển hex về bytes
+    // Convert hex to bytes
     std::vector<unsigned char> bytes = hexToBytes(encryptedData);
     
     std::string decrypted;

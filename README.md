@@ -10,7 +10,6 @@ Dự án **Hệ thống Đăng nhập và Quản lý Ví Điểm Thưởng** là
 - 💰 **Quản lý ví điểm thưởng**: Chuyển điểm, xem lịch sử giao dịch
 - 🔒 **Xác thực 2 lớp**: Sử dụng OTP cho các giao dịch quan trọng
 - 💾 **Lưu trữ dữ liệu**: File-based storage với hệ thống backup tự động
-- 🔧 **Giao diện console**: Dễ sử dụng với menu điều hướng rõ ràng
 
 ## Thành viên nhóm và phân công công việc
 

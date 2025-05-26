@@ -75,27 +75,34 @@ bool DataManager::initialize() {
 // ==================== USER DATA MANAGEMENT ====================
 
 bool DataManager::saveUser(const User& user) {
-    try {
-        // Đọc dữ liệu hiện tại
-        std::string currentData = readJsonFile(usersFile);
-        
-        // Trong thực tế nên dùng thư viện JSON, ở đây làm đơn giản
-        std::ofstream file(usersFile, std::ios::app);
-        if (!file.is_open()) {
-            return false;
+    auto users = loadAllUsers();
+    bool found = false;
+    for (auto& existingUser : users) {
+        if (existingUser->getUsername() == user.getUsername()) {
+            *existingUser = user;
+            found = true;
+            break;
         }
-        
-        // Ghi thông tin user (format đơn giản)
-        file << user.getUsername() << "|" 
-             << user.toJson() << "\n";
-        
-        file.close();
-        return true;
-        
-    } catch (const std::exception& e) {
-        std::cerr << "Lỗi lưu user: " << e.what() << std::endl;
-        return false;
     }
+    
+    if (!found) {
+        users.push_back(std::make_unique<User>(user));
+    }
+
+    std::stringstream json;
+    json << "{\n  \"users\": [\n";
+    
+    for (size_t i = 0; i < users.size(); ++i) {
+        json << "    " << users[i]->toJson();
+        if (i < users.size() - 1) {
+            json << ",";
+        }
+        json << "\n";
+    }
+    
+    json << "  ]\n}";
+
+    return writeJsonFile(usersFile, json.str());
 }
 
 std::unique_ptr<User> DataManager::loadUser(const std::string& username) {
@@ -106,13 +113,12 @@ std::unique_ptr<User> DataManager::loadUser(const std::string& username) {
         }
         
         std::string line;
-        while (std::getline(file, line)) {
-            size_t delimPos = line.find('|');
+        while (std::getline(file, line)) {            size_t delimPos = line.find('|');
             if (delimPos != std::string::npos) {
                 std::string fileUsername = line.substr(0, delimPos);
                 if (fileUsername == username) {
                     std::string jsonData = line.substr(delimPos + 1);
-                    // Trong thực tế sẽ parse JSON, ở đây return nullptr tạm thời
+                    // In practice would parse JSON, here temporarily returns nullptr
                     file.close();
                     return User::fromJson(jsonData);
                 }
@@ -121,9 +127,8 @@ std::unique_ptr<User> DataManager::loadUser(const std::string& username) {
         
         file.close();
         return nullptr;
-        
-    } catch (const std::exception& e) {
-        std::cerr << "Lỗi tải user: " << e.what() << std::endl;
+          } catch (const std::exception& e) {
+        std::cerr << "Error loading user: " << e.what() << std::endl;
         return nullptr;
     }
 }
@@ -253,23 +258,36 @@ bool DataManager::userExists(const std::string& username) {
 // ==================== WALLET DATA MANAGEMENT ====================
 
 bool DataManager::saveWallet(const Wallet& wallet) {
-    try {
-        std::ofstream file(walletsFile, std::ios::app);
-        if (!file.is_open()) {
-            return false;
+    auto wallets = loadAllWallets();
+    
+    bool found = false;
+    for (auto& existingWallet : wallets) {
+        if (existingWallet->getWalletId() == wallet.getWalletId()) {
+            *existingWallet = wallet;
+            found = true;
+            break;
         }
-        
-        // Ghi thông tin wallet (format đơn giản)
-        file << wallet.getWalletId() << "|" 
-             << wallet.toJson() << "\n";
-        
-        file.close();
-        return true;
-        
-    } catch (const std::exception& e) {
-        std::cerr << "Lỗi lưu wallet: " << e.what() << std::endl;
-        return false;
     }
+    
+    if (!found) {
+        wallets.push_back(std::make_unique<Wallet>(wallet));
+    }
+
+    // JSON
+    std::stringstream json;
+    json << "{\n  \"wallets\": [\n";
+    
+    for (size_t i = 0; i < wallets.size(); ++i) {
+        json << "    " << wallets[i]->toJson();
+        if (i < wallets.size() - 1) {
+            json << ",";
+        }
+        json << "\n";
+    }
+    
+    json << "  ]\n}";
+
+    return writeJsonFile(walletsFile, json.str());
 }
 
 std::unique_ptr<Wallet> DataManager::loadWallet(const std::string& walletId) {
@@ -358,15 +376,53 @@ std::shared_ptr<Wallet> DataManager::loadWalletById(const std::string& walletId)
 }
 
 std::shared_ptr<Wallet> DataManager::loadWalletByUserId(const std::string& userId) {
-    // Trong thực tế, sẽ tìm wallet có ownerId = userId
-    // Ở đây đơn giản hóa: dùng userId làm walletId
-    auto unique_wallet = loadWallet(userId);
-    if (unique_wallet) {
-        return std::shared_ptr<Wallet>(unique_wallet.release());
+    // Đọc file wallets.json
+    std::string content = readJsonFile(walletsFile);
+    if (content.empty()) {
+        // File không tồn tại hoặc rỗng
+        return nullptr;
     }
     
-    // Nếu không tìm thấy, thử tìm theo ownerId
-    return loadWalletByOwner_shared(userId);
+    // Parse JSON
+    size_t pos = content.find("\"wallets\":");
+    if (pos == std::string::npos) {
+        return nullptr;
+    }
+    
+    // Tìm ví theo userId
+    pos = 0;
+    while ((pos = content.find("\"ownerId\":", pos)) != std::string::npos) {
+        size_t endPos = content.find("\n", pos);
+        std::string line = content.substr(pos, endPos - pos);
+        
+        size_t valuePos = line.find(":", 0);
+        if (valuePos != std::string::npos) {
+            std::string value = line.substr(valuePos + 1);
+            value.erase(0, value.find_first_not_of(" \t\r\""));
+            value.erase(value.find_last_not_of(" \t\r\",") + 1);
+            
+            if (value == userId) {
+                // Tìm walletId trong đoạn JSON này
+                size_t walletIdPos = content.rfind("\"walletId\":", pos);
+                if (walletIdPos != std::string::npos) {
+                    // Extract wallet ID
+                    std::string walletLine = content.substr(walletIdPos, content.find("\n", walletIdPos) - walletIdPos);
+                    size_t idValuePos = walletLine.find(":", 0);
+                    if (idValuePos != std::string::npos) {
+                        std::string walletId = walletLine.substr(idValuePos + 1);
+                        walletId.erase(0, walletId.find_first_not_of(" \t\r\""));
+                        walletId.erase(walletId.find_last_not_of(" \t\r\",") + 1);
+                        
+                        return loadWalletById(walletId);
+                    }
+                }
+                break;
+            }
+        }
+        pos = endPos;
+    }
+    
+    return nullptr;
 }
 
 std::shared_ptr<Wallet> DataManager::loadWalletByOwner_shared(const std::string& ownerId) {
@@ -693,20 +749,14 @@ std::string DataManager::readJsonFile(const std::string& filepath) {
 }
 
 bool DataManager::writeJsonFile(const std::string& filepath, const std::string& content) {
-    try {
-        std::ofstream file(filepath);
-        if (!file.is_open()) {
-            return false;
-        }
-        
-        file << content;
-        file.close();
-        return true;
-        
-    } catch (const std::exception& e) {
-        std::cerr << "Lỗi ghi file " << filepath << ": " << e.what() << std::endl;
+    std::ofstream file(filepath, std::ios::out | std::ios::trunc);
+    if (!file.is_open()) {
         return false;
     }
+    
+    file << content;
+    file.close();
+    return true;
 }
 
 std::string DataManager::calculateChecksum(const std::string& filepath) {

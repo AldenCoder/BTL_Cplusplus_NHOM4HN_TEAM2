@@ -1,6 +1,6 @@
 /**
  * @file AuthSystem.cpp
- * @brief Triển khai hệ thống xác thực và quản lý người dùng
+ * @brief Implementation of authentication system and user management
  * @author Team 2C
  */
 
@@ -12,7 +12,7 @@
 
 AuthSystem::AuthSystem() 
     : isInitialized(false), currentUser(nullptr) {
-    // Khởi tạo các component
+    // Initialize components
     dataManager = std::make_shared<DataManager>();
     otpManager = std::make_shared<OTPManager>();
 }
@@ -26,18 +26,18 @@ AuthSystem::~AuthSystem() {
 bool AuthSystem::initialize() {
     try {
         if (!dataManager->initialize()) {
-            std::cerr << "Lỗi: Không thể khởi tạo DataManager" << std::endl;
+            std::cerr << "Error: Cannot initialize DataManager" << std::endl;
             return false;
         }
 
-        // Tạo admin mặc định nếu chưa có
+        // Create default admin if not exists
         createDefaultAdmin();
         
         isInitialized = true;
         return true;
     }
     catch (const std::exception& e) {
-        std::cerr << "Lỗi khởi tạo AuthSystem: " << e.what() << std::endl;
+        std::cerr << "Error initializing AuthSystem: " << e.what() << std::endl;
         return false;
     }
 }
@@ -55,22 +55,18 @@ RegistrationResult AuthSystem::registerUser(const std::string& username,
     if (!validationError.empty()) {
         result.message = validationError;
         return result;
-    }
-
-    // Kiểm tra username đã tồn tại
+    }    // Check if username exists
     if (isUsernameExists(username)) {
-        result.message = "Tên đăng nhập đã tồn tại!";
+        result.message = "Username already exists!";
         return result;
     }
 
-    // Kiểm tra mật khẩu
+    // Check password
     if (password.length() < 8) {
-        result.message = "Mật khẩu phải có ít nhất 8 ký tự!";
+        result.message = "Password must be at least 8 characters!";
         return result;
-    }
-
-    try {
-        // Tạo user mới
+    }    try {
+        // Create new user
         auto user = std::make_shared<User>(
             SecurityUtils::generateUUID(),
             username,
@@ -80,24 +76,25 @@ RegistrationResult AuthSystem::registerUser(const std::string& username,
             phoneNumber,        UserRole::REGULAR
         );
 
-        // Tạo ví mặc định
+        // Create default wallet
         std::string walletId = SecurityUtils::generateUUID();
         auto wallet = std::make_shared<Wallet>(walletId, user->getId(), 0.0);
+        dataManager->saveWallet(wallet); 
         user->setWallet(wallet);
 
-        // Lưu user
+        // Save user
         if (dataManager->saveUser(user)) {
-            // Thêm vào cache
+            // Add to cache
             userCache[username] = user;
             
             result.success = true;
-            result.message = "Đăng ký tài khoản thành công!";
+            result.message = "Account registered successfully!";
         } else {
-            result.message = "Lỗi lưu dữ liệu người dùng!";
+            result.message = "Error saving user data!";
         }
     }
     catch (const std::exception& e) {
-        result.message = "Lỗi hệ thống: " + std::string(e.what());
+        result.message = "System error: " + std::string(e.what());
     }
 
     return result;
@@ -110,34 +107,31 @@ RegistrationResult AuthSystem::createAccount(const std::string& username,
                                            UserRole role,
                                            bool autoGeneratePassword) {
     RegistrationResult result;
-    result.success = false;
-
-    // Chỉ admin mới có quyền tạo tài khoản
+    result.success = false;    // Only admin can create accounts
     if (!isCurrentUserAdmin()) {
-        result.message = "Không có quyền tạo tài khoản!";
+        result.message = "No permission to create accounts!";
         return result;
     }
 
-    // Kiểm tra đầu vào
+    // Validate input
     std::string validationError = validateRegistrationData(username, email, phoneNumber);
     if (!validationError.empty()) {
         result.message = validationError;
         return result;
     }
 
-    // Kiểm tra username đã tồn tại
+    // Check if username exists
     if (isUsernameExists(username)) {
-        result.message = "Tên đăng nhập đã tồn tại!";
+        result.message = "Username already exists!";
         return result;
     }
 
-    try {
-        std::string password;
+    try {        std::string password;
         if (autoGeneratePassword) {
             password = SecurityUtils::generateRandomString(12);
             result.generatedPassword = password;
         } else {
-            password = "123456789"; // Mật khẩu mặc định
+            password = "123456789"; // Default password
         }
 
         // Tạo user mới
@@ -155,6 +149,7 @@ RegistrationResult AuthSystem::createAccount(const std::string& username,
         // Tạo ví mặc định
         std::string walletId = SecurityUtils::generateUUID();
         auto wallet = std::make_shared<Wallet>(walletId, user->getId(), 0.0);
+        dataManager->saveWallet(wallet); 
         user->setWallet(wallet);
 
         // Lưu user
@@ -163,13 +158,13 @@ RegistrationResult AuthSystem::createAccount(const std::string& username,
             userCache[username] = user;
             
             result.success = true;
-            result.message = "Tạo tài khoản thành công!";
+            result.message = "Account created successfully!";
         } else {
-            result.message = "Lỗi lưu dữ liệu người dùng!";
+            result.message = "Error saving user data!";
         }
     }
     catch (const std::exception& e) {
-        result.message = "Lỗi hệ thống: " + std::string(e.what());
+        result.message = "System error: " + std::string(e.what());
     }
 
     return result;
@@ -177,47 +172,44 @@ RegistrationResult AuthSystem::createAccount(const std::string& username,
 
 LoginResult AuthSystem::login(const std::string& username, const std::string& password) {
     LoginResult result;
-    result.success = false;
-
-    if (username.empty() || password.empty()) {
-        result.message = "Tên đăng nhập và mật khẩu không được để trống!";
+    result.success = false;    if (username.empty() || password.empty()) {
+        result.message = "Username and password cannot be empty!";
         return result;
     }
 
     try {
-        // Tìm user
+        // Find user
         auto user = findUserByUsername(username);
         if (!user) {
-            result.message = "Tên đăng nhập không tồn tại!";
+            result.message = "Username does not exist!";
             return result;
         }
 
-        // Kiểm tra mật khẩu
+        // Check password
         if (!SecurityUtils::verifyPassword(password, user->getPasswordHash())) {
-            result.message = "Mật khẩu không đúng!";
+            result.message = "Password is incorrect!";
             return result;
         }
 
-        // Kiểm tra trạng thái tài khoản
+        // Check account status
         if (!user->isActive()) {
-            result.message = "Tài khoản đã bị khóa!";
+            result.message = "Account is locked!";
             return result;
         }
 
         // Đăng nhập thành công
         currentUser = user;
         user->updateLastLogin();
-        
-        result.success = true;
+          result.success = true;
         result.user = user;
         result.requirePasswordChange = user->requirePasswordChange();
-        result.message = "Đăng nhập thành công!";
+        result.message = "Login successful!";
 
-        // Lưu thông tin đăng nhập cuối
+        // Save last login information
         dataManager->saveUser(user);
     }
     catch (const std::exception& e) {
-        result.message = "Lỗi hệ thống: " + std::string(e.what());
+        result.message = "System error: " + std::string(e.what());
     }
 
     return result;
@@ -424,24 +416,24 @@ std::string AuthSystem::validateRegistrationData(const std::string& username,
                                                 const std::string& phoneNumber) {
     // Kiểm tra username
     if (username.length() < 3 || username.length() > 20) {
-        return "Tên đăng nhập phải từ 3-20 ký tự!";
+        return "Username must be 3-20 characters long!";
     }
 
     std::regex usernameRegex("^[a-zA-Z0-9_]+$");
     if (!std::regex_match(username, usernameRegex)) {
-        return "Tên đăng nhập chỉ được chứa chữ cái, số và dấu gạch dưới!";
+        return "Username can only contain letters, numbers, and underscores!";
     }
 
-    // Kiểm tra email
+    // Check email
     std::regex emailRegex(R"([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})");
     if (!std::regex_match(email, emailRegex)) {
-        return "Định dạng email không hợp lệ!";
+        return "Invalid email format!";
     }
 
-    // Kiểm tra số điện thoại
+    // Check phone number
     std::regex phoneRegex(R"(^[0-9]{10,11}$)");
     if (!std::regex_match(phoneNumber, phoneRegex)) {
-        return "Số điện thoại phải có 10-11 chữ số!";
+        return "Phone number must be 10-11 digits!";
     }
 
     return ""; // Hợp lệ
