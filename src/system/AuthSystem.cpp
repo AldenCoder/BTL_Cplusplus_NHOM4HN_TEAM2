@@ -1,0 +1,468 @@
+/**
+ * @file AuthSystem.cpp
+ * @brief Triển khai hệ thống xác thực và quản lý người dùng
+ * @author Team 2C
+ */
+
+#include "AuthSystem.h"
+#include "../security/OTPManager.h"
+#include <iostream>
+#include <algorithm>
+#include <regex>
+
+AuthSystem::AuthSystem() 
+    : isInitialized(false), currentUser(nullptr) {
+    // Khởi tạo các component
+    dataManager = std::make_shared<DataManager>();
+    otpManager = std::make_shared<OTPManager>();
+}
+
+AuthSystem::~AuthSystem() {
+    if (isLoggedIn()) {
+        logout();
+    }
+}
+
+bool AuthSystem::initialize() {
+    try {
+        if (!dataManager->initialize()) {
+            std::cerr << "Lỗi: Không thể khởi tạo DataManager" << std::endl;
+            return false;
+        }
+
+        // Tạo admin mặc định nếu chưa có
+        createDefaultAdmin();
+        
+        isInitialized = true;
+        return true;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Lỗi khởi tạo AuthSystem: " << e.what() << std::endl;
+        return false;
+    }
+}
+
+RegistrationResult AuthSystem::registerUser(const std::string& username,
+                                           const std::string& password,
+                                           const std::string& fullName,
+                                           const std::string& email,
+                                           const std::string& phoneNumber) {
+    RegistrationResult result;
+    result.success = false;
+
+    // Kiểm tra đầu vào
+    std::string validationError = validateRegistrationData(username, email, phoneNumber);
+    if (!validationError.empty()) {
+        result.message = validationError;
+        return result;
+    }
+
+    // Kiểm tra username đã tồn tại
+    if (isUsernameExists(username)) {
+        result.message = "Tên đăng nhập đã tồn tại!";
+        return result;
+    }
+
+    // Kiểm tra mật khẩu
+    if (password.length() < 8) {
+        result.message = "Mật khẩu phải có ít nhất 8 ký tự!";
+        return result;
+    }
+
+    try {
+        // Tạo user mới
+        auto user = std::make_shared<User>(
+            SecurityUtils::generateUUID(),
+            username,
+            SecurityUtils::hashPassword(password),
+            fullName,
+            email,
+            phoneNumber,        UserRole::REGULAR
+        );
+
+        // Tạo ví mặc định
+        std::string walletId = SecurityUtils::generateUUID();
+        auto wallet = std::make_shared<Wallet>(walletId, user->getId(), 0.0);
+        user->setWallet(wallet);
+
+        // Lưu user
+        if (dataManager->saveUser(user)) {
+            // Thêm vào cache
+            userCache[username] = user;
+            
+            result.success = true;
+            result.message = "Đăng ký tài khoản thành công!";
+        } else {
+            result.message = "Lỗi lưu dữ liệu người dùng!";
+        }
+    }
+    catch (const std::exception& e) {
+        result.message = "Lỗi hệ thống: " + std::string(e.what());
+    }
+
+    return result;
+}
+
+RegistrationResult AuthSystem::createAccount(const std::string& username,
+                                           const std::string& fullName,
+                                           const std::string& email,
+                                           const std::string& phoneNumber,
+                                           UserRole role,
+                                           bool autoGeneratePassword) {
+    RegistrationResult result;
+    result.success = false;
+
+    // Chỉ admin mới có quyền tạo tài khoản
+    if (!isCurrentUserAdmin()) {
+        result.message = "Không có quyền tạo tài khoản!";
+        return result;
+    }
+
+    // Kiểm tra đầu vào
+    std::string validationError = validateRegistrationData(username, email, phoneNumber);
+    if (!validationError.empty()) {
+        result.message = validationError;
+        return result;
+    }
+
+    // Kiểm tra username đã tồn tại
+    if (isUsernameExists(username)) {
+        result.message = "Tên đăng nhập đã tồn tại!";
+        return result;
+    }
+
+    try {
+        std::string password;
+        if (autoGeneratePassword) {
+            password = SecurityUtils::generateRandomString(12);
+            result.generatedPassword = password;
+        } else {
+            password = "123456789"; // Mật khẩu mặc định
+        }
+
+        // Tạo user mới
+        auto user = std::make_shared<User>(
+            SecurityUtils::generateUUID(),
+            username,
+            SecurityUtils::hashPassword(password),
+            fullName,
+            email,
+            phoneNumber,
+            role
+        );        // Đánh dấu cần đổi mật khẩu
+        user->setRequirePasswordChange(true);
+
+        // Tạo ví mặc định
+        std::string walletId = SecurityUtils::generateUUID();
+        auto wallet = std::make_shared<Wallet>(walletId, user->getId(), 0.0);
+        user->setWallet(wallet);
+
+        // Lưu user
+        if (dataManager->saveUser(user)) {
+            // Thêm vào cache
+            userCache[username] = user;
+            
+            result.success = true;
+            result.message = "Tạo tài khoản thành công!";
+        } else {
+            result.message = "Lỗi lưu dữ liệu người dùng!";
+        }
+    }
+    catch (const std::exception& e) {
+        result.message = "Lỗi hệ thống: " + std::string(e.what());
+    }
+
+    return result;
+}
+
+LoginResult AuthSystem::login(const std::string& username, const std::string& password) {
+    LoginResult result;
+    result.success = false;
+
+    if (username.empty() || password.empty()) {
+        result.message = "Tên đăng nhập và mật khẩu không được để trống!";
+        return result;
+    }
+
+    try {
+        // Tìm user
+        auto user = findUserByUsername(username);
+        if (!user) {
+            result.message = "Tên đăng nhập không tồn tại!";
+            return result;
+        }
+
+        // Kiểm tra mật khẩu
+        if (!SecurityUtils::verifyPassword(password, user->getPasswordHash())) {
+            result.message = "Mật khẩu không đúng!";
+            return result;
+        }
+
+        // Kiểm tra trạng thái tài khoản
+        if (!user->isActive()) {
+            result.message = "Tài khoản đã bị khóa!";
+            return result;
+        }
+
+        // Đăng nhập thành công
+        currentUser = user;
+        user->updateLastLogin();
+        
+        result.success = true;
+        result.user = user;
+        result.requirePasswordChange = user->requirePasswordChange();
+        result.message = "Đăng nhập thành công!";
+
+        // Lưu thông tin đăng nhập cuối
+        dataManager->saveUser(user);
+    }
+    catch (const std::exception& e) {
+        result.message = "Lỗi hệ thống: " + std::string(e.what());
+    }
+
+    return result;
+}
+
+void AuthSystem::logout() {
+    if (currentUser) {
+        // Có thể log thông tin đăng xuất ở đây
+        currentUser = nullptr;
+    }
+}
+
+bool AuthSystem::changePassword(const std::string& userId,
+                               const std::string& oldPassword,
+                               const std::string& newPassword) {
+    try {
+        auto user = findUserById(userId);
+        if (!user) {
+            return false;
+        }
+
+        // Kiểm tra mật khẩu cũ (trừ trường hợp admin reset)
+        bool isAdminReset = isCurrentUserAdmin() && currentUser->getId() != userId;
+        if (!isAdminReset) {
+            if (!SecurityUtils::verifyPassword(oldPassword, user->getPasswordHash())) {
+                return false;
+            }
+        }
+
+        // Kiểm tra mật khẩu mới
+        if (newPassword.length() < 8) {
+            return false;
+        }
+
+        // Cập nhật mật khẩu
+        user->setPasswordHash(SecurityUtils::hashPassword(newPassword));
+        user->setRequirePasswordChange(false);
+
+        // Lưu thay đổi
+        return dataManager->saveUser(user);
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Lỗi đổi mật khẩu: " << e.what() << std::endl;
+        return false;
+    }
+}
+
+bool AuthSystem::updateProfile(const std::string& userId,
+                              const std::string& newFullName,
+                              const std::string& newEmail,
+                              const std::string& newPhoneNumber,
+                              const std::string& otpCode) {
+    try {
+        auto user = findUserById(userId);
+        if (!user) {
+            return false;
+        }
+
+        // Xác thực OTP
+        if (!otpManager->verifyOTP(userId, otpCode, OTPType::PROFILE_UPDATE)) {
+            return false;
+        }
+
+        // Cập nhật thông tin
+        user->setFullName(newFullName);
+        user->setEmail(newEmail);
+        user->setPhoneNumber(newPhoneNumber);
+
+        // Lưu thay đổi
+        return dataManager->saveUser(user);
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Lỗi cập nhật thông tin: " << e.what() << std::endl;
+        return false;
+    }
+}
+
+std::string AuthSystem::requestProfileUpdateOTP(const std::string& userId) {
+    try {
+        auto user = findUserById(userId);
+        if (!user) {
+            return "";
+        }
+
+        return otpManager->generateOTP(userId, OTPType::PROFILE_UPDATE);
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Lỗi tạo OTP: " << e.what() << std::endl;
+        return "";
+    }
+}
+
+bool AuthSystem::isCurrentUserAdmin() const {
+    return currentUser && currentUser->getRole() == UserRole::ADMIN;
+}
+
+std::vector<std::shared_ptr<User>> AuthSystem::getAllUsers() {
+    std::vector<std::shared_ptr<User>> users;
+    
+    if (!isCurrentUserAdmin()) {
+        return users; // Chỉ admin mới được xem danh sách
+    }    try {
+        auto uniqueUsers = dataManager->loadAllUsers();
+        // Convert unique_ptr to shared_ptr
+        for (auto& uniqueUser : uniqueUsers) {
+            users.push_back(std::shared_ptr<User>(uniqueUser.release()));
+        }
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Lỗi tải danh sách user: " << e.what() << std::endl;
+    }
+
+    return users;
+}
+
+std::shared_ptr<User> AuthSystem::findUserByUsername(const std::string& username) {
+    // Kiểm tra cache trước
+    auto it = userCache.find(username);
+    if (it != userCache.end()) {
+        return it->second;
+    }
+
+    // Tải từ storage
+    return loadUserToCache(username);
+}
+
+std::shared_ptr<User> AuthSystem::findUserById(const std::string& userId) {
+    try {
+        // Tìm trong cache trước
+        for (const auto& pair : userCache) {
+            if (pair.second->getId() == userId) {
+                return pair.second;
+            }
+        }        // Tải từ storage
+        auto uniqueUser = dataManager->loadUserById(userId);
+        if (uniqueUser) {
+            return std::shared_ptr<User>(uniqueUser.release());
+        }
+        return nullptr;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Lỗi tìm user: " << e.what() << std::endl;
+        return nullptr;
+    }
+}
+
+bool AuthSystem::isUsernameExists(const std::string& username) {
+    return findUserByUsername(username) != nullptr;
+}
+
+bool AuthSystem::saveUser(std::shared_ptr<User> user) {
+    try {
+        bool success = dataManager->saveUser(user);
+        if (success) {
+            // Cập nhật cache
+            userCache[user->getUsername()] = user;
+        }
+        return success;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Lỗi lưu user: " << e.what() << std::endl;
+        return false;
+    }
+}
+
+void AuthSystem::createDefaultAdmin() {
+    try {
+        // Kiểm tra đã có admin chưa
+        auto users = dataManager->loadAllUsers();
+        for (const auto& user : users) {
+            if (user->getRole() == UserRole::ADMIN) {
+                return; // Đã có admin
+            }
+        }
+
+        // Tạo admin mặc định
+        auto admin = std::make_shared<User>(
+            SecurityUtils::generateUUID(),
+            "admin",
+            SecurityUtils::hashPassword("admin123"),
+            "Quản trị viên hệ thống",
+            "admin@system.com",
+            "0000000000",
+            UserRole::ADMIN        );
+
+        // Tạo ví cho admin
+        std::string walletId = SecurityUtils::generateUUID();
+        auto wallet = std::make_shared<Wallet>(walletId, admin->getId(), 1000000.0); // 1 triệu điểm ban đầu
+        admin->setWallet(wallet);        // Save admin
+        dataManager->saveUser(admin);
+        userCache["admin"] = admin;
+
+        std::cout << "Default admin account created:" << std::endl;
+        std::cout << "Username: admin" << std::endl;
+        std::cout << "Password: admin123" << std::endl;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Error creating default admin: " << e.what() << std::endl;
+    }
+}
+
+std::string AuthSystem::validateRegistrationData(const std::string& username,
+                                                const std::string& email,
+                                                const std::string& phoneNumber) {
+    // Kiểm tra username
+    if (username.length() < 3 || username.length() > 20) {
+        return "Tên đăng nhập phải từ 3-20 ký tự!";
+    }
+
+    std::regex usernameRegex("^[a-zA-Z0-9_]+$");
+    if (!std::regex_match(username, usernameRegex)) {
+        return "Tên đăng nhập chỉ được chứa chữ cái, số và dấu gạch dưới!";
+    }
+
+    // Kiểm tra email
+    std::regex emailRegex(R"([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})");
+    if (!std::regex_match(email, emailRegex)) {
+        return "Định dạng email không hợp lệ!";
+    }
+
+    // Kiểm tra số điện thoại
+    std::regex phoneRegex(R"(^[0-9]{10,11}$)");
+    if (!std::regex_match(phoneNumber, phoneRegex)) {
+        return "Số điện thoại phải có 10-11 chữ số!";
+    }
+
+    return ""; // Hợp lệ
+}
+
+std::shared_ptr<User> AuthSystem::loadUserToCache(const std::string& username) {
+    try {
+        auto uniqueUser = dataManager->loadUserByUsername(username);
+        if (uniqueUser) {
+            auto sharedUser = std::shared_ptr<User>(uniqueUser.release());
+            userCache[username] = sharedUser;
+            return sharedUser;
+        }
+        return nullptr;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Lỗi tải user vào cache: " << e.what() << std::endl;
+        return nullptr;
+    }
+}
+
+void AuthSystem::removeUserFromCache(const std::string& username) {
+    userCache.erase(username);
+}
