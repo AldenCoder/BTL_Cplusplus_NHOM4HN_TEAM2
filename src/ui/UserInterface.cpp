@@ -230,8 +230,14 @@ void UserInterface::registerScreen() {
     std::cout << "|                  REGISTER                        |\n";
     std::cout << "+--------------------------------------------------+\n\n";
 
-    std::string username = getInput("Username (3-20 characters): ");
-    if (username.empty()) return;
+    std::string username;
+    do {
+        username = getInput("Username (3-20 characters): ");
+        if (username.empty()) return;
+        if (authSystem.isUsernameExists(username)) {
+            showError("Username exists, enter a different username!");
+        }
+    } while (authSystem.isUsernameExists(username));
 
     std::string fullName = getInput("Full name: ");
     if (fullName.empty()) return;
@@ -256,9 +262,11 @@ void UserInterface::registerScreen() {
         }
     } while (phoneNumber.empty());
 
-    std::string password = getPassword("Password (at least 8 characters): ");
-    if (password.empty()) return;
-
+    std::string password;
+    do {
+        password = getPassword("Password (at least 8 characters): ");
+        if (password.empty()) return;
+    } while (!validateStrongPassword(password));
     std::string confirmPassword = getPassword("Confirm password: ");
     if (confirmPassword != password) {
         showError("Password confirmation does not match!");
@@ -312,17 +320,15 @@ void UserInterface::changePassword() {
     std::cout << "+--------------------------------------------------+\n\n";
     
     std::string oldPassword = getPassword("Current password: ");
-    std::string newPassword = getPassword("New password (at least 8 characters): ");
+    std::string newPassword;
+    do {
+        newPassword = getPassword("New password (at least 8 characters): ");
+        if (newPassword.empty()) return;
+    } while (!validateStrongPassword(newPassword));
     std::string confirmPassword = getPassword("Confirm new password: ");
     
     if (newPassword != confirmPassword) {
         showError("Passwords do not match!");
-        pauseScreen();
-        return;
-    }
-    
-    if (newPassword.length() < 8) {
-        showError("Password must be at least 8 characters long!");
         pauseScreen();
         return;
     }
@@ -333,7 +339,8 @@ void UserInterface::changePassword() {
     } else {
         showError("Password change failed! Please check your old password.");
     }
-    
+
+
     pauseScreen();
 }
 
@@ -913,4 +920,12 @@ int UserInterface::showMenuSelection(const std::string& title, const std::vector
     }
     
     return getIntInput("Choose: ", 1, static_cast<int>(options.size()));
+}
+
+bool UserInterface::validateStrongPassword(const std::string& password) {
+    if (!SecurityUtils::isStrongPassword(password)) {
+        showError("Password must be at least 8 characters and contain upper, lower, digit, and special character!");
+        return false;
+    }
+    return true;
 }

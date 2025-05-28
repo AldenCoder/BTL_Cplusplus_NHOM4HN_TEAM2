@@ -64,7 +64,7 @@ public:
      */
     static std::string generatePassword(int length = 12, 
                                        bool includeSpecialChars = true);
-
+    static bool isStrongPassword(const std::string& password);
     /**
      * @brief Tạo OTP cho user
      * @param userId ID người dùng

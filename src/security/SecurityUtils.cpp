@@ -9,6 +9,7 @@
 #include <iomanip>
 #include <algorithm>
 #include <functional>  // For std::hash
+#include <regex>
 // Removed OpenSSL includes for simple compilation
 
 // Initialize static members
@@ -70,6 +71,20 @@ std::string SecurityUtils::generatePassword(int length, bool includeSpecialChars
     }
     
     return password;
+}
+
+bool SecurityUtils::isStrongPassword(const std::string& password) {
+    if (password.length() < 8) return false;
+
+    std::regex lowercase("[a-z]");
+    std::regex uppercase("[A-Z]");
+    std::regex digit("[0-9]");
+    std::regex special("[^a-zA-Z0-9]");
+
+    return std::regex_search(password, lowercase) &&
+           std::regex_search(password, uppercase) &&
+           std::regex_search(password, digit) &&
+           std::regex_search(password, special);
 }
 
 std::string SecurityUtils::generateOTP(const std::string& userId, const std::string& purpose) {

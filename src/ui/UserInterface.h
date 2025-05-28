@@ -287,6 +287,13 @@ private:
      * @return User's choice (1-based index)
      */
     int showMenuSelection(const std::string& title, const std::vector<std::string>& options);
+
+    /**
+     * @brief Validate strong password
+     * @param password Password to check
+     * @return true if password is strong
+     */
+    bool validateStrongPassword(const std::string& password);
 };
 
 #endif // USER_INTERFACE_H
