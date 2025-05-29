@@ -1,9 +1,3 @@
-/**
- * @file Wallet.h
- * @brief Wallet class definition - Reward points wallet management
- * @author Team 2C
- */
-
 #ifndef WALLET_H
 #define WALLET_H
 
@@ -12,10 +6,6 @@
 #include <chrono>
 #include <memory>
 
-/**
- * @enum TransactionType
- * @brief Transaction types in wallet
- */
 enum class TransactionType {
     TRANSFER_IN,    // Receive points
     TRANSFER_OUT,   // Send points
@@ -24,21 +14,12 @@ enum class TransactionType {
     ROLLBACK        // Transaction rollback
 };
 
-/**
- * @enum TransactionStatus
- * @brief Transaction status
- */
 enum class TransactionStatus {
     PENDING,        // Waiting for confirmation
     COMPLETED,      // Completed
     FAILED,         // Failed
     CANCELLED       // Cancelled
 };
-
-/**
- * @struct Transaction
- * @brief Transaction data structure
- */
 struct Transaction {
     std::string transactionId;          // Transaction ID (UUID)
     std::string fromWalletId;          // Sender wallet ID
@@ -113,7 +94,7 @@ public:
      * @param initialBalance Initial balance (default 0)
      */
     Wallet(const std::string& walletId, const std::string& ownerId, 
-           double initialBalance = 0.0);
+            double initialBalance = 0.0);
 
     // Getter methods
     const std::string& getWalletId() const { return walletId; }
@@ -160,7 +141,7 @@ public:
      * @return Transaction ID if successful, empty string if failed
      */
     std::string transferOut(double amount, const std::string& toWalletId, 
-                           const std::string& description = "");
+                            const std::string& description = "");
 
     /**
      * @brief Receive points from transaction
@@ -187,7 +168,7 @@ public:
      * @return true if successfully confirmed
      */
     bool confirmTransaction(const std::string& transactionId, 
-                           const std::string& otpCode);
+                            const std::string& otpCode);
 
     /**
      * @brief Get transaction history within time range
@@ -258,7 +239,7 @@ public:
      * @return Transaction ID
      */
     std::string issuePoints(const std::string& toWalletId, double amount,
-                           const std::string& description = "Initial points");
+                            const std::string& description = "Initial points");
 
     /**
      * @brief Check if master wallet has enough points
@@ -287,4 +268,4 @@ public:
     static MasterWallet& getInstance();
 };
 
-#endif // WALLET_H
+#endif

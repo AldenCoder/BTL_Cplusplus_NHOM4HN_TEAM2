@@ -1,4 +1,3 @@
-# Create build.ps1 file
 cd "f:\project\team2C"
 
 # Create directories
