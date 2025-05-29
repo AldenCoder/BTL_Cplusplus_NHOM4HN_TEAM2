@@ -21,6 +21,6 @@ g++ -std=c++17 -c src/system/WalletManager.cpp -o obj/system/WalletManager.o
 g++ -std=c++17 -c src/ui/UserInterface.cpp -o obj/ui/UserInterface.o
 
 # Link all object files
-g++ -std=c++17 -o WalletSystem.exe obj/main.o obj/models/User.o obj/models/Wallet.o obj/security/OTPManager.o obj/security/SecurityUtils.o obj/storage/DataManager.o obj/system/AuthSystem.o obj/system/WalletManager.o obj/ui/UserInterface.o
+g++ -std=c++17 -o wallet_system.exe obj/main.o obj/models/User.o obj/models/Wallet.o obj/security/OTPManager.o obj/security/SecurityUtils.o obj/storage/DataManager.o obj/system/AuthSystem.o obj/system/WalletManager.o obj/ui/UserInterface.o
 
-Write-Host "Build completed! Run with: .\WalletSystem.exe"
+Write-Host "Build completed! Run with: .\wallet_system.exe"

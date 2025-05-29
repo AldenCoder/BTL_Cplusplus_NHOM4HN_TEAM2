@@ -200,7 +200,7 @@ LoginResult AuthSystem::login(const std::string& username, const std::string& pa
         // Đăng nhập thành công
         currentUser = user;
         user->updateLastLogin();
-          result.success = true;
+        result.success = true;
         result.user = user;
         result.requirePasswordChange = user->requirePasswordChange();
         result.message = "Login successful!";
@@ -217,7 +217,6 @@ LoginResult AuthSystem::login(const std::string& username, const std::string& pa
 
 void AuthSystem::logout() {
     if (currentUser) {
-        // Có thể log thông tin đăng xuất ở đây
         currentUser = nullptr;
     }
 }

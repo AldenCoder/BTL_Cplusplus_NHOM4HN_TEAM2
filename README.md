@@ -165,7 +165,8 @@ make run
 ./bin/wallet_system
 
 # Windows
-wallet_system.exe
+.\build.ps1
+.\wallet_system.exe
 ```
 
 ## Hướng dẫn sử dụng
