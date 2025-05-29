@@ -176,22 +176,12 @@ public:
      * @param ownerId Owner ID
      * @return Unique pointer to Wallet
      */
-    std::unique_ptr<Wallet> loadWalletByOwner(const std::string& ownerId);
-
-    /**
+    std::unique_ptr<Wallet> loadWalletByOwner(const std::string& ownerId);    /**
      * @brief Check if wallet exists
      * @param walletId Wallet ID
      * @return true if exists
      */
     bool walletExists(const std::string& walletId);
-
-private:
-    // ==================== HELPER METHODS ====================
-    
-    /**
-     * @brief Helper method to load wallet by owner with shared_ptr
-     */
-    std::shared_ptr<Wallet> loadWalletByOwner_shared(const std::string& ownerId);
 
     // ==================== BACKUP & RECOVERY ====================
     
@@ -225,6 +215,13 @@ private:
      * @brief Check and create auto backup if needed
      */
     void checkAutoBackup();
+
+private:
+    // ==================== HELPER METHODS ====================
+      /**
+     * @brief Helper method to load wallet by owner with shared_ptr
+     */
+    std::shared_ptr<Wallet> loadWalletByOwner_shared(const std::string& ownerId);
 
     /**
      * @brief Verify data integrity

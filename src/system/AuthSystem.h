@@ -163,13 +163,17 @@ public:
      * @brief Check if current user is admin
      * @return true if admin
      */
-    bool isCurrentUserAdmin() const;
-
-    /**
+    bool isCurrentUserAdmin() const;    /**
      * @brief Get list of all users (admin only)
      * @return Vector containing user information
      */
-    std::vector<std::shared_ptr<User>> getAllUsers();    /**
+    std::vector<std::shared_ptr<User>> getAllUsers();
+
+    /**
+     * @brief Get data manager
+     * @return Shared pointer to data manager
+     */
+    std::shared_ptr<DataManager> getDataManager() const { return dataManager; }    /**
      * @brief Find user by username
      * @param username Login username
      * @return Shared pointer to user (nullptr if not found)

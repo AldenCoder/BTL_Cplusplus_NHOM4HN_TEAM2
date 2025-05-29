@@ -9,6 +9,7 @@
 
 #include "../system/AuthSystem.h"
 #include "../system/WalletManager.h"
+#include "../storage/DataManager.h"
 #include <iostream>
 #include <string>
 #include <memory>
@@ -163,7 +164,27 @@ private:
     /**
      * @brief Manage data backup
      */
-    void manageBackup();    // ==================== UTILITY FUNCTIONS ====================
+    void manageBackup();
+
+    /**
+     * @brief Create manual backup
+     */
+    void createManualBackup();
+
+    /**
+     * @brief View backup history
+     */
+    void viewBackupHistory();
+
+    /**
+     * @brief Restore from backup
+     */
+    void restoreFromBackup();
+
+    /**
+     * @brief Clean up old backups
+     */
+    void cleanupBackups();    // ==================== UTILITY FUNCTIONS ====================
     
     /**
      * @brief Read input from user
@@ -214,13 +235,17 @@ private:
      * @brief Show success message
      * @param message Success message
      */
-    void showSuccess(const std::string& message);
-
-    /**
+    void showSuccess(const std::string& message);    /**
      * @brief Show information
      * @param message Information
      */
     void showInfo(const std::string& message);
+
+    /**
+     * @brief Show warning message
+     * @param message Warning message
+     */
+    void showWarning(const std::string& message);
 
     /**
      * @brief Pause screen and wait for user to press key
@@ -259,14 +284,19 @@ private:
      * @param amount Amount
      * @return Formatted string
      */
-    std::string formatCurrency(double amount);
-
-    /**
+    std::string formatCurrency(double amount);    /**
      * @brief Format time display
      * @param timePoint Time point
      * @return Formatted time string
      */
     std::string formatDateTime(const std::chrono::system_clock::time_point& timePoint);
+
+    /**
+     * @brief Format file size display
+     * @param size File size in bytes
+     * @return Formatted file size string
+     */
+    std::string formatFileSize(size_t size);
 
     /**
      * @brief Display user information as table
