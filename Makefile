@@ -1,6 +1,3 @@
-# Makefile cho dự án Hệ thống đăng nhập và quản lý ví điểm thưởng
-# Author: Team 2C
-
 # Compiler và flags
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -O2 -g

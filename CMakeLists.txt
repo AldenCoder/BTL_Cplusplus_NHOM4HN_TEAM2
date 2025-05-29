@@ -1,6 +1,3 @@
-# CMakeLists.txt cho dự án Hệ thống đăng nhập và quản lý ví điểm thưởng
-# Author: Team 2C
-
 cmake_minimum_required(VERSION 3.10)
 project(WalletSystem VERSION 1.0.0 LANGUAGES CXX)
 

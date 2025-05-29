@@ -65,10 +65,12 @@ RegistrationResult AuthSystem::registerUser(const std::string& username,
     if (password.length() < 8) {
         result.message = "Password must be at least 8 characters!";
         return result;
-    }    try {
-        // Create new user
+    }    try {        // Generate a unique user ID
+        std::string userId = SecurityUtils::generateUUID();
+        
+        // Create new user with this ID
         auto user = std::make_shared<User>(
-            SecurityUtils::generateUUID(),
+            userId,
             username,
             SecurityUtils::hashPassword(password),
             fullName,
@@ -76,11 +78,13 @@ RegistrationResult AuthSystem::registerUser(const std::string& username,
             phoneNumber,        UserRole::REGULAR
         );
 
-        // Create default wallet
+        // Create default wallet with a unique wallet ID
         std::string walletId = SecurityUtils::generateUUID();
-        auto wallet = std::make_shared<Wallet>(walletId, user->getId(), 0.0);
-        dataManager->saveWallet(wallet); 
-        user->setWallet(wallet);
+        auto wallet = std::make_shared<Wallet>(walletId, userId, 0.0);
+        user->setWalletId(walletId);
+        
+        // Save wallet first
+        dataManager->saveWallet(wallet);
 
         // Save user
         if (dataManager->saveUser(user)) {
@@ -132,25 +136,30 @@ RegistrationResult AuthSystem::createAccount(const std::string& username,
             result.generatedPassword = password;
         } else {
             password = "123456789"; // Default password
-        }
-
+        }        // Generate a unique user ID
+        std::string userId = SecurityUtils::generateUUID();
+        
         // Tạo user mới
         auto user = std::make_shared<User>(
-            SecurityUtils::generateUUID(),
+            userId,
             username,
             SecurityUtils::hashPassword(password),
             fullName,
             email,
             phoneNumber,
             role
-        );        // Đánh dấu cần đổi mật khẩu
+        );
+        
+        // Đánh dấu cần đổi mật khẩu
         user->setRequirePasswordChange(true);
 
-        // Tạo ví mặc định
+        // Tạo ví mặc định with a unique wallet ID
         std::string walletId = SecurityUtils::generateUUID();
-        auto wallet = std::make_shared<Wallet>(walletId, user->getId(), 0.0);
-        dataManager->saveWallet(wallet); 
-        user->setWallet(wallet);
+        auto wallet = std::make_shared<Wallet>(walletId, userId, 0.0);
+        user->setWalletId(walletId);
+        
+        // Save wallet first
+        dataManager->saveWallet(wallet);
 
         // Lưu user
         if (dataManager->saveUser(user)) {
@@ -200,7 +209,7 @@ LoginResult AuthSystem::login(const std::string& username, const std::string& pa
         // Đăng nhập thành công
         currentUser = user;
         user->updateLastLogin();
-          result.success = true;
+        result.success = true;
         result.user = user;
         result.requirePasswordChange = user->requirePasswordChange();
         result.message = "Login successful!";
@@ -217,7 +226,6 @@ LoginResult AuthSystem::login(const std::string& username, const std::string& pa
 
 void AuthSystem::logout() {
     if (currentUser) {
-        // Có thể log thông tin đăng xuất ở đây
         currentUser = nullptr;
     }
 }
@@ -383,22 +391,27 @@ void AuthSystem::createDefaultAdmin() {
             if (user->getRole() == UserRole::ADMIN) {
                 return; // Đã có admin
             }
-        }
-
+        }        // Generate unique user ID for admin
+        std::string adminId = SecurityUtils::generateUUID();
+        
         // Tạo admin mặc định
         auto admin = std::make_shared<User>(
-            SecurityUtils::generateUUID(),
+            adminId,
             "admin",
             SecurityUtils::hashPassword("admin123"),
             "Quản trị viên hệ thống",
             "admin@system.com",
             "0000000000",
-            UserRole::ADMIN        );
+            UserRole::ADMIN        
+        );
 
-        // Tạo ví cho admin
+        // Tạo ví cho admin with unique wallet ID
         std::string walletId = SecurityUtils::generateUUID();
-        auto wallet = std::make_shared<Wallet>(walletId, admin->getId(), 1000000.0); // 1 triệu điểm ban đầu
-        admin->setWallet(wallet);        // Save admin
+        auto wallet = std::make_shared<Wallet>(walletId, adminId, 1000000.0); // 1 triệu điểm ban đầu
+        admin->setWalletId(walletId);
+        
+        // Save wallet first, then admin
+        dataManager->saveWallet(wallet);
         dataManager->saveUser(admin);
         userCache["admin"] = admin;
 

@@ -1,10 +1,5 @@
-/**
- * @file User.cpp
- * @brief Implementation of User class
- * @author Team 2C
- */
-
 #include "User.h"
+#include "Wallet.h" 
 #include "../security/SecurityUtils.h"
 #include <sstream>
 #include <iomanip>
@@ -18,8 +13,8 @@ User::User(const std::string& id, const std::string& username, const std::string
       isFirstLogin(true), createdAt(std::chrono::system_clock::now()),
       lastLogin(std::chrono::system_clock::now()) {
     
-    // Generate wallet ID
-    walletId = generateWalletId();
+    // We'll set the wallet ID separately to ensure consistency
+    walletId = "";
 }
 
 bool User::verifyPassword(const std::string& password) const {
@@ -131,5 +126,13 @@ std::string User::generateUserId() {
 }
 
 std::string User::generateWalletId() {
-    return "W_" + SecurityUtils::generateUUID().substr(0, 8);
+    // Return full UUID for consistency
+    return SecurityUtils::generateUUID();
+}
+
+// Implement setWallet method
+void User::setWallet(std::shared_ptr<class Wallet> wallet) {
+    if (wallet) {
+        walletId = wallet->getWalletId();
+    }
 }
