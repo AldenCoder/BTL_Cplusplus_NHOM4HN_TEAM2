@@ -1,9 +1,3 @@
-/**
- * @file UserInterface.h
- * @brief Console-based user interface
- * @author Team 2C
- */
-
 #ifndef USER_INTERFACE_H
 #define USER_INTERFACE_H
 

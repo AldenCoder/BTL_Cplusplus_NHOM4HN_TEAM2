@@ -209,6 +209,11 @@ make run
 # Windows
 .\build.ps1
 .\wallet_system.exe
+
+# Mac
+chmod +x build.sh
+.\build.sh (đổi đuôi .sh)
+.\wallet_system
 ```
 
 ## Hướng dẫn sử dụng

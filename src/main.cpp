@@ -1,19 +1,9 @@
-/**
- * @file main.cpp
- * @brief Main entry point - Login and Wallet Point Management System
- * @author Team 2C
- * @date 2025
- * 
- * Main program initializes system and displays main menu for users
- */
-
 #include "system/AuthSystem.h"
 #include "ui/UserInterface.h"
 #include <iostream>
 #include <locale>
 
 int main() {
-    // Note: Removed locale setting for MinGW compatibility
       try {
         // Initialize authentication system
         AuthSystem authSystem;

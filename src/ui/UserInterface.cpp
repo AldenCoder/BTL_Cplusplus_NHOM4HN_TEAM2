@@ -1,19 +1,30 @@
-/**
- * @file UserInterface.cpp
- * @brief Console user interface implementation
- * @author Team 2C
- */
-
 #include "UserInterface.h"
 #include "../security/OTPManager.h"
 #include <iostream>
 #include <iomanip>
 #include <sstream>
 #include <regex>
-#include <conio.h>  // For Windows
+// #include <conio.h>  // For Windows
+#include <termios.h>  // For macOS/Linux
+#include <unistd.h>
+// #include <sys/ioctl.h>
 #include <limits>
 #include <algorithm>
 #include <cctype>
+
+#ifndef _WIN32 //for mac
+int getch() {
+    struct termios oldattr, newattr;
+    int ch;
+    tcgetattr(STDIN_FILENO, &oldattr);
+    newattr = oldattr;
+    newattr.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newattr);
+    ch = getchar();
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldattr);
+    return ch;
+}
+#endif
 
 UserInterface::UserInterface(AuthSystem& authSys) 
     : authSystem(authSys), isRunning(false) {
@@ -1051,18 +1062,38 @@ std::string UserInterface::getInput(const std::string& prompt) {
     return input;
 }
 
+// std::string UserInterface::getPassword(const std::string& prompt) {
+//     std::cout << prompt;
+//     std::string password;
+//     char ch;
+    
+//     while ((ch = _getch()) != '\r') { // '\r' is Enter key
+//         if (ch == '\b') { // Backspace
+//             if (!password.empty()) {
+//                 password.pop_back();
+//                 std::cout << "\b \b";
+//             }
+//         } else {
+//             password += ch;
+//             std::cout << '*';
+//         }
+//     }
+//     std::cout << std::endl;
+//     return password;
+// }
+
 std::string UserInterface::getPassword(const std::string& prompt) {
     std::cout << prompt;
     std::string password;
     char ch;
     
-    while ((ch = _getch()) != '\r') { // '\r' is Enter key
-        if (ch == '\b') { // Backspace
+    while ((ch = getch()) != '\r' && ch != '\n') { // Support both \r and \n
+        if (ch == '\b' || ch == 127) { // Backspace (127 is DEL on some systems)
             if (!password.empty()) {
                 password.pop_back();
                 std::cout << "\b \b";
             }
-        } else {
+        } else if (ch >= 32 && ch <= 126) { // Only printable characters
             password += ch;
             std::cout << '*';
         }
@@ -1130,8 +1161,8 @@ void UserInterface::pauseScreen() {
 }
 
 void UserInterface::clearScreen() {
-    system("cls"); // Windows
-    // system("clear"); // Linux/Mac
+    // system("cls"); // Windows
+    system("clear"); // Linux/Mac
 }
 
 void UserInterface::showHeader() {
