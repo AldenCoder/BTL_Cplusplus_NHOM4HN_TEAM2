@@ -1,30 +1,17 @@
+/**
+ * @file UserInterface.cpp
+ * @brief Console user interface implementation
+ * @author Team 2C
+ */
+
 #include "UserInterface.h"
 #include "../security/OTPManager.h"
 #include <iostream>
 #include <iomanip>
 #include <sstream>
 #include <regex>
-// #include <conio.h>  // For Windows
-#include <termios.h>  // For macOS/Linux
-#include <unistd.h>
-// #include <sys/ioctl.h>
+#include <conio.h>  // For Windows
 #include <limits>
-#include <algorithm>
-#include <cctype>
-
-#ifndef _WIN32 //for mac
-int getch() {
-    struct termios oldattr, newattr;
-    int ch;
-    tcgetattr(STDIN_FILENO, &oldattr);
-    newattr = oldattr;
-    newattr.c_lflag &= ~(ICANON | ECHO);
-    tcsetattr(STDIN_FILENO, TCSANOW, &newattr);
-    ch = getchar();
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldattr);
-    return ch;
-}
-#endif
 
 UserInterface::UserInterface(AuthSystem& authSys) 
     : authSystem(authSys), isRunning(false) {
@@ -259,19 +246,15 @@ void UserInterface::registerScreen() {
     do {
         email = getInput("Email: ");
         if (email.empty()) return;
-        if (!isValidEmail(email)) {
-            showError("Invalid email!");
-            email = "";
-        }
-    } while (email.empty());
+           if (!isValidUsername(username)) {
+            username = "";roemail.empty());
 
     std::string phoneNumber;
     do {
         phoneNumber = getInput("Phone number (10-11 digits): ");
         if (phoneNumber.empty()) return;
         if (!isValidPhoneNumber(phoneNumber)) {
-            showError("Invalid phone number!");
-            phoneNumber = "";
+            shusername.empty()          phoneNumber = "";
         }
     } while (phoneNumber.empty());
 
@@ -680,35 +663,17 @@ void UserInterface::createNewAccount() {
 
     std::vector<std::string> roleOptions = {"Regular User", "Admin"};
     int roleChoice = showMenuSelection("Select role:", roleOptions);
-    UserRole role = (roleChoice == 2) ? UserRole::ADMIN : UserRole::REGULAR;    showInfo("Creating account...");
+    UserRole role = (roleChoice == 2) ? UserRole::ADMIN : UserRole::REGULAR;
+
+    showInfo("Creating account...");
     
     auto result = authSystem.createAccount(username, fullName, email, phoneNumber, role, true);
     
     if (result.success) {
         showSuccess(result.message);
-        std::cout << "\n";
-        std::cout << "+--------------------------------------------------+\n";
-        std::cout << "|            ACCOUNT CREATION SUCCESSFUL           |\n";
-        std::cout << "+--------------------------------------------------+\n";
-        std::cout << "| Username: " << std::setw(37) << username << " |\n";
-        std::cout << "| Full Name: " << std::setw(36) << fullName << " |\n";
-        std::cout << "| Email: " << std::setw(41) << email << " |\n";
-        std::cout << "| Role: " << std::setw(42) << (role == UserRole::ADMIN ? "Admin" : "User") << " |\n";
-        std::cout << "+--------------------------------------------------+\n";
-        
         if (!result.generatedPassword.empty()) {
-            std::cout << "\n";
-            std::cout << "+--------------------------------------------------+\n";
-            std::cout << "|               AUTO-GENERATED PASSWORD            |\n";
-            std::cout << "+--------------------------------------------------+\n";
-            std::cout << "| Password: " << std::setw(37) << result.generatedPassword << " |\n";
-            std::cout << "+--------------------------------------------------+\n";
-            std::cout << "\n";
-            showWarning("IMPORTANT NOTICE:");
-            showWarning("- Please provide this password to the user");
-            showWarning("- User MUST change password on first login");
-            showWarning("- Keep this password secure until delivered");
-            std::cout << "\n";
+            showInfo("Generated password: " + result.generatedPassword);
+            showInfo("User must change password on first login!");
         }
     } else {
         showError(result.message);
@@ -788,275 +753,8 @@ void UserInterface::issuePointsFromMaster() {
     pauseScreen();
 }
 
-// ==================== BACKUP MANAGEMENT FUNCTIONS ====================
-
 void UserInterface::manageBackup() {
-    int choice;
-    do {
-        clearScreen();
-        showHeader();
-        
-        std::cout << "+--------------------------------------------------+\n";
-        std::cout << "|               BACKUP MANAGEMENT                  |\n";
-        std::cout << "+--------------------------------------------------+\n\n";
-        
-        std::vector<std::string> backupOptions = {
-            "Create Manual Backup",
-            "View Backup History",
-            "Restore from Backup",
-            "Cleanup Old Backups",
-            "Return to Main Menu"
-        };
-        
-        choice = showMenuSelection("Select backup operation:", backupOptions);
-        
-        switch (choice) {
-            case 1: createManualBackup(); break;
-            case 2: viewBackupHistory(); break;
-            case 3: restoreFromBackup(); break;
-            case 4: cleanupBackups(); break;
-            case 5: 
-                showInfo("Returning to main menu...");
-                pauseScreen();
-                break;
-            default:
-                showError("Invalid selection! Please try again.");
-                pauseScreen();
-                break;
-        }
-    } while (choice != 5);
-}
-
-void UserInterface::createManualBackup() {
-    clearScreen();
-    showHeader();
-    
-    std::cout << "+--------------------------------------------------+\n";
-    std::cout << "|               CREATE MANUAL BACKUP               |\n";
-    std::cout << "+--------------------------------------------------+\n\n";
-
-    std::string description = getInput("Backup description (optional): ");
-    if (description.empty()) {
-        description = "Manual backup";
-    }
-
-    showInfo("Creating backup...");
-    
-    try {
-        // Get DataManager through AuthSystem
-        auto dataManager = authSystem.getDataManager();
-        if (dataManager) {
-            BackupInfo backupInfo = dataManager->createBackup(BackupType::MANUAL, description);
-            
-            showSuccess("Backup created successfully!");
-            std::cout << "\nBackup Details:\n";
-            std::cout << "- Backup ID: " << backupInfo.backupId << "\n";
-            std::cout << "- Filename: " << backupInfo.filename << "\n";
-            std::cout << "- Size: " << formatFileSize(backupInfo.fileSize) << "\n";
-            std::cout << "- Created: " << formatDateTime(backupInfo.timestamp) << "\n";
-        } else {
-            showError("Unable to access data manager!");
-        }
-    } catch (const std::exception& e) {
-        showError("Backup creation failed: " + std::string(e.what()));
-    }
-    
-    pauseScreen();
-}
-
-void UserInterface::viewBackupHistory() {
-    clearScreen();
-    showHeader();
-    
-    std::cout << "+--------------------------------------------------+\n";
-    std::cout << "|                BACKUP HISTORY                    |\n";
-    std::cout << "+--------------------------------------------------+\n\n";
-
-    try {
-        // Get DataManager through AuthSystem
-        auto dataManager = authSystem.getDataManager();
-        if (dataManager) {
-            std::vector<BackupInfo> backupHistory = dataManager->getBackupHistory();
-            
-            if (backupHistory.empty()) {
-                showInfo("No backup files found.");
-            } else {
-                std::cout << "Found " << backupHistory.size() << " backup(s):\n\n";
-                
-                std::cout << std::setw(20) << "Backup ID" 
-                         << std::setw(25) << "Filename"
-                         << std::setw(12) << "Size"
-                         << std::setw(20) << "Created" 
-                         << std::setw(10) << "Type" << "\n";
-                std::cout << std::string(87, '-') << "\n";
-                
-                for (const auto& backup : backupHistory) {
-                    std::string typeStr = (backup.type == BackupType::MANUAL) ? "Manual" :
-                                        (backup.type == BackupType::AUTO) ? "Auto" : "Emergency";
-                    
-                    std::cout << std::setw(20) << backup.backupId.substr(0,18)
-                             << std::setw(25) << backup.filename.substr(0,23)
-                             << std::setw(12) << formatFileSize(backup.fileSize)
-                             << std::setw(20) << formatDateTime(backup.timestamp).substr(0,18)
-                             << std::setw(10) << typeStr << "\n";
-                }
-            }
-        } else {
-            showError("Unable to access data manager!");
-        }
-    } catch (const std::exception& e) {
-        showError("Failed to retrieve backup history: " + std::string(e.what()));
-    }
-    
-    pauseScreen();
-}
-
-void UserInterface::restoreFromBackup() {
-    clearScreen();
-    showHeader();
-    
-    std::cout << "+--------------------------------------------------+\n";
-    std::cout << "|                RESTORE FROM BACKUP               |\n";
-    std::cout << "+--------------------------------------------------+\n\n";
-
-    try {
-        // Get DataManager through AuthSystem
-        auto dataManager = authSystem.getDataManager();
-        if (!dataManager) {
-            showError("Unable to access data manager!");
-            pauseScreen();
-            return;
-        }
-
-        std::vector<BackupInfo> backupHistory = dataManager->getBackupHistory();
-        
-        if (backupHistory.empty()) {
-            showInfo("No backup files available for restore.");
-            pauseScreen();
-            return;
-        }
-
-        // Show available backups
-        std::vector<std::string> backupOptions;
-        for (size_t i = 0; i < std::min(backupHistory.size(), static_cast<size_t>(10)); ++i) {
-            const auto& backup = backupHistory[i];
-            std::string option = backup.backupId + " (" + formatDateTime(backup.timestamp) + 
-                               ", " + formatFileSize(backup.fileSize) + ")";
-            if (i == 0) option += " [Latest]";
-            backupOptions.push_back(option);
-        }
-        
-        int choice = showMenuSelection("Select backup to restore:", backupOptions);
-        if (choice <= 0 || choice > static_cast<int>(backupOptions.size())) {
-            showInfo("Operation cancelled!");
-            pauseScreen();
-            return;
-        }
-
-        const BackupInfo& selectedBackup = backupHistory[choice - 1];
-        
-        std::cout << "\nSelected backup details:\n";
-        std::cout << "- ID: " << selectedBackup.backupId << "\n";
-        std::cout << "- Created: " << formatDateTime(selectedBackup.timestamp) << "\n";
-        std::cout << "- Size: " << formatFileSize(selectedBackup.fileSize) << "\n\n";
-        
-        showWarning("WARNING: Restoring will overwrite current data!");
-        showInfo("Current data will be automatically backed up before restore.");
-        
-        if (!confirmAction("Do you want to proceed with restore?")) {
-            showInfo("Restore cancelled!");
-            pauseScreen();
-            return;
-        }
-
-        showInfo("Creating safety backup of current data...");
-        dataManager->createBackup(BackupType::EMERGENCY, "Pre-restore backup");
-        
-        showInfo("Restoring from backup...");
-        bool success = dataManager->restoreFromBackup(selectedBackup.backupId);
-        
-        if (success) {
-            showSuccess("Data restored successfully!");
-            showWarning("Please restart the application to see changes.");
-        } else {
-            showError("Restore failed! Current data remains unchanged.");
-        }
-        
-    } catch (const std::exception& e) {
-        showError("Restore operation failed: " + std::string(e.what()));
-    }
-    
-    pauseScreen();
-}
-
-void UserInterface::cleanupBackups() {
-    clearScreen();
-    showHeader();
-    
-    std::cout << "+--------------------------------------------------+\n";
-    std::cout << "|                CLEANUP OLD BACKUPS               |\n";
-    std::cout << "+--------------------------------------------------+\n\n";
-
-    try {
-        // Get DataManager through AuthSystem
-        auto dataManager = authSystem.getDataManager();
-        if (!dataManager) {
-            showError("Unable to access data manager!");
-            pauseScreen();
-            return;
-        }
-
-        std::vector<BackupInfo> backupHistory = dataManager->getBackupHistory();
-        
-        if (backupHistory.empty()) {
-            showInfo("No backup files found to clean up.");
-            pauseScreen();
-            return;
-        }
-
-        int keepCount = getIntInput("How many recent backups to keep? ", 1, 20);
-        if (keepCount <= 0) {
-            showInfo("Operation cancelled!");
-            pauseScreen();
-            return;
-        }
-
-        std::cout << "\nCurrent backup count: " << backupHistory.size() << "\n";
-        std::cout << "Will keep latest: " << keepCount << " backups\n";
-        
-        if (static_cast<int>(backupHistory.size()) <= keepCount) {
-            showInfo("No cleanup needed - backup count is within limit.");
-            pauseScreen();
-            return;
-        }
-        
-        int toDelete = static_cast<int>(backupHistory.size()) - keepCount;
-        std::cout << "Will delete: " << toDelete << " old backups\n\n";
-
-        if (!confirmAction("Do you want to proceed with cleanup?")) {
-            showInfo("Cleanup cancelled!");
-            pauseScreen();
-            return;
-        }
-
-        showInfo("Cleaning up old backups...");
-        
-        int deletedCount = 0;
-        // Note: In a real implementation, DataManager would have a cleanup method
-        // For now, we'll simulate the cleanup
-        for (int i = keepCount; i < static_cast<int>(backupHistory.size()); ++i) {
-            // In real implementation: dataManager->deleteBackup(backupHistory[i].backupId);
-            deletedCount++;
-        }
-        
-        showSuccess("Cleanup completed!");
-        std::cout << "Deleted " << deletedCount << " old backup files.\n";
-        std::cout << "Kept " << keepCount << " most recent backups.\n";
-        
-    } catch (const std::exception& e) {
-        showError("Cleanup operation failed: " + std::string(e.what()));
-    }
-    
+    showInfo("Data backup feature is under development!");
     pauseScreen();
 }
 
@@ -1069,38 +767,18 @@ std::string UserInterface::getInput(const std::string& prompt) {
     return input;
 }
 
-// std::string UserInterface::getPassword(const std::string& prompt) {
-//     std::cout << prompt;
-//     std::string password;
-//     char ch;
-    
-//     while ((ch = _getch()) != '\r') { // '\r' is Enter key
-//         if (ch == '\b') { // Backspace
-//             if (!password.empty()) {
-//                 password.pop_back();
-//                 std::cout << "\b \b";
-//             }
-//         } else {
-//             password += ch;
-//             std::cout << '*';
-//         }
-//     }
-//     std::cout << std::endl;
-//     return password;
-// }
-
 std::string UserInterface::getPassword(const std::string& prompt) {
     std::cout << prompt;
     std::string password;
     char ch;
     
-    while ((ch = getch()) != '\r' && ch != '\n') { // Support both \r and \n
-        if (ch == '\b' || ch == 127) { // Backspace (127 is DEL on some systems)
+    while ((ch = _getch()) != '\r') { // '\r' is Enter key
+        if (ch == '\b') { // Backspace
             if (!password.empty()) {
                 password.pop_back();
                 std::cout << "\b \b";
             }
-        } else if (ch >= 32 && ch <= 126) { // Only printable characters
+        } else {
             password += ch;
             std::cout << '*';
         }
@@ -1158,10 +836,6 @@ void UserInterface::showInfo(const std::string& message) {
     std::cout << "[INFO] " << message << std::endl;
 }
 
-void UserInterface::showWarning(const std::string& message) {
-    std::cout << "[WARNING] " << message << std::endl;
-}
-
 void UserInterface::pauseScreen() {
     std::cout << "\nPress Enter to continue...";
     std::cin.get();
@@ -1184,45 +858,13 @@ void UserInterface::showSeparator() {
 }
 
 bool UserInterface::isValidEmail(const std::string& email) {
-    // Enhanced email validation
-    if (email.empty() || email.length() > 254) return false;
-    
-    // Check for basic format
     std::regex emailRegex(R"([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})");
-    if (!std::regex_match(email, emailRegex)) return false;
-    
-    // Additional checks
-    if (email.find("..") != std::string::npos) return false;  // No consecutive dots
-    if (email[0] == '.' || email[email.length()-1] == '.') return false;  // No dots at start/end
-    if (email.find('@') == 0 || email.find('@') == email.length()-1) return false;  // @ not at edges
-    
-    return true;
+    return std::regex_match(email, emailRegex);
 }
 
 bool UserInterface::isValidPhoneNumber(const std::string& phone) {
-    // Enhanced phone validation for Vietnamese phone numbers
-    if (phone.empty()) return false;
-    
-    // Remove common separators for validation
-    std::string cleanPhone = phone;
-    cleanPhone.erase(std::remove_if(cleanPhone.begin(), cleanPhone.end(), 
-        [](char c) { return c == ' ' || c == '-' || c == '(' || c == ')' || c == '+'; }), 
-        cleanPhone.end());
-    
-    // Check if all remaining characters are digits
-    if (!std::all_of(cleanPhone.begin(), cleanPhone.end(), ::isdigit)) return false;
-      // Vietnamese phone number patterns
-    std::vector<std::regex> phonePatterns = {
-        std::regex(R"(^84[0-9]{9,10}$)"),    // +84 country code
-        std::regex(R"(^0[0-9]{9,10}$)"),     // Starting with 0
-        std::regex(R"(^[0-9]{10,11}$)")      // 10-11 digits
-    };
-    
-    for (const auto& pattern : phonePatterns) {
-        if (std::regex_match(cleanPhone, pattern)) return true;
-    }
-    
-    return false;
+    std::regex phoneRegex(R"(^[0-9]{10,11}$)");
+    return std::regex_match(phone, phoneRegex);
 }
 
 std::string UserInterface::formatCurrency(double amount) {
@@ -1235,20 +877,6 @@ std::string UserInterface::formatDateTime(const std::chrono::system_clock::time_
     auto time_t = std::chrono::system_clock::to_time_t(timePoint);
     std::ostringstream oss;
     oss << std::put_time(std::localtime(&time_t), "%d/%m/%Y %H:%M:%S");
-    return oss.str();
-}
-
-std::string UserInterface::formatFileSize(size_t size) {
-    std::ostringstream oss;
-    if (size < 1024) {
-        oss << size << " B";
-    } else if (size < 1024 * 1024) {
-        oss << std::fixed << std::setprecision(1) << (size / 1024.0) << " KB";
-    } else if (size < 1024 * 1024 * 1024) {
-        oss << std::fixed << std::setprecision(1) << (size / (1024.0 * 1024.0)) << " MB";
-    } else {
-        oss << std::fixed << std::setprecision(1) << (size / (1024.0 * 1024.0 * 1024.0)) << " GB";
-    }
     return oss.str();
 }
 
@@ -1297,3 +925,55 @@ bool UserInterface::validateStrongPassword(const std::string& password) {
     }
     return true;
 }
+
+
+boboolbool UserInterface::isValidUsername(const std::string& username) {
+    // Enhanced username validation
+    if (username.empty() || username.length() > 20) return false;
+    
+    // Check for alphanumeric characters and underscores
+    std::regex usernameRegex(R"(^[a-zA-Z0-9_]+$)");
+    if (!std::regex_match(username, usernameRegex)) return false;
+    
+    // Check for consecutive underscores
+    if (username.find("__") != std::string::npos) return false;
+    
+    // Check for leading or trailing underscores
+    if (username.front() == '_' || username.back() == '_') return false;
+    
+    return true;
+}
+bool UserInterface::isValidUsername(const std::string& username) {
+    // Enhanced username validation
+    if (username.empty() || username.length() > 20) return false;
+    
+    // Check for alphanumeric characters and underscores
+    std::regex usernameRegex(R"(^[a-zA-Z0-9_]+$)");
+    if (!std::regex_match(username, usernameRegex)) return false;
+    
+    // Check for consecutive underscores
+    if (username.find("__") != std::string::npos) return false;
+    
+    // Check for leading or trailing underscores
+    if (username.front() == '_' || username.back() == '_') return false;
+    
+    return true;
+}  || userusername.llength < 3
+    bool vasis    bool isValid = SecurityUtils::isValidUsername(username);truel;{}
+        
+    ())            showError("Invalid username! Please use 3-20 characters, only letters, numbers, and underscores are allowed.");
+                        return false;
+    
+    if (username.length() < 3 || username.length() > 20) {
+        showError("Invalid username! Please use 3-20 characters, only letters, numbers, and underscores are allowed.");
+        return false;
+    }        if (authSystem.isUsernameExists(username)) {
+            showError("Username exists, enter a different username!");
+
+    
+                }
+            rreturn            return false;                
+        // Check if username already exists={}    if (!std::regex_match(username, usernameRegex)) {
+        showError("Invalid username! Only letters, numbers, and underscores are allowed.");
+        return false;
+    }

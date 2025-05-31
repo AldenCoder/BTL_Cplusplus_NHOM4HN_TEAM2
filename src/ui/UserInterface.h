@@ -318,6 +318,8 @@ private:
      * @return true if password is strong
      */
     bool validateStrongPassword(const std::string& password);
+
+    bool isValidUsername(const std::string& username);
 };
 
 #endif // USER_INTERFACE_H
