@@ -170,7 +170,8 @@ void UserInterface::showAdminMenu() {
 void UserInterface::handleMainMenu(int choice) {
     switch (choice) {
         case 1: loginScreen(); break;
-        case 2: registerScreen(); break;        case 3: 
+        case 2: registerScreen(); break;
+        case 3:
             showInfo("Thank you for using the system!");
             isRunning = false; 
             break;
@@ -190,6 +191,7 @@ void UserInterface::handleUserMenu(int choice) {
         case 6: viewTransactionHistory(); break;
         case 7: viewWalletReport(); break;
         case 8: logout(); break;
+        case 9:
         default:
             showError("Invalid choice!");
             pauseScreen();
@@ -337,8 +339,9 @@ void UserInterface::viewProfile() {
 
     auto user = authSystem.getCurrentUser();
     displayUserInfo(*user);
-    
-    pauseScreen();
+    std::cout << "| 0. Go back                                       |\n";
+    int choice = getIntInput("Choose function: ", 1, 12);
+    handleGobackMenu(choice);
 }
 
 void UserInterface::changePassword() {
@@ -1630,4 +1633,6 @@ void UserInterface::viewUserWalletDetails() {
     }
     
     pauseScreen();
+void gobackMenu() {
+
 }
