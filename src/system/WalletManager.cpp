@@ -14,7 +14,7 @@
 
 const double WalletManager::INITIAL_USER_POINTS = 100.0; // 100 điểm ban đầu
 
-WalletManager::WalletManager(std::shared_ptr<DataManager> dataManager, 
+WalletManager::WalletManager(std::shared_ptr<DatabaseManager> dataManager, 
                             std::shared_ptr<OTPManager> otpManager)
     : dataManager(dataManager), otpManager(otpManager) {
 }
@@ -36,9 +36,8 @@ bool WalletManager::initialize() {
                 std::string walletId = wallet->getId();
                 std::cout << "[DEBUG] Processing wallet " << walletId << std::endl;
                 
-                // Convert unique_ptr to shared_ptr properly
-                std::shared_ptr<Wallet> sharedWallet(wallet.release());
-                walletCache[walletId] = sharedWallet;
+                // Wallet is already shared_ptr from DatabaseManager
+                walletCache[walletId] = wallet;
                 
                 std::cout << "[DEBUG] Added wallet " << walletId << " to cache" << std::endl;
             } else {
@@ -113,7 +112,7 @@ std::shared_ptr<Wallet> WalletManager::getWalletByUserId(const std::string& user
         }
 
         // Tải từ storage
-        return dataManager->loadWalletByUserId(userId);
+        return dataManager->loadWalletByOwnerId(userId);
     }
     catch (const std::exception& e) {
         std::cerr << "Lỗi tìm ví theo user ID: " << e.what() << std::endl;
@@ -259,7 +258,7 @@ std::vector<std::string> WalletManager::findWalletsByOwner(const std::string& ow
 
         // Nếu không tìm thấy trong cache, tìm trong storage
         if (walletIds.empty()) {
-            auto wallet = dataManager->loadWalletByUserId(ownerId);
+            auto wallet = dataManager->loadWalletByOwnerId(ownerId);
             if (wallet) {
                 walletIds.push_back(wallet->getId());
             }
@@ -408,7 +407,7 @@ void WalletManager::clearWalletCache() {
 
 std::shared_ptr<Wallet> WalletManager::loadWalletToCache(const std::string& walletId) {
     try {
-        auto wallet = dataManager->loadWalletById(walletId);
+        auto wallet = dataManager->loadWallet(walletId);
         if (wallet) {
             walletCache[walletId] = wallet;
         }

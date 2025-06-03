@@ -13,7 +13,7 @@
 AuthSystem::AuthSystem() 
     : isInitialized(false), currentUser(nullptr) {
     // Initialize components
-    dataManager = std::make_shared<DataManager>();
+    dataManager = std::make_shared<DatabaseManager>();
     otpManager = std::make_shared<OTPManager>();
 }
 
@@ -26,7 +26,7 @@ AuthSystem::~AuthSystem() {
 bool AuthSystem::initialize() {
     try {
         if (!dataManager->initialize()) {
-            std::cerr << "Error: Cannot initialize DataManager" << std::endl;
+            std::cerr << "Error: Cannot initialize DatabaseManager" << std::endl;
             return false;
         }
 
@@ -319,12 +319,10 @@ std::vector<std::shared_ptr<User>> AuthSystem::getAllUsers() {
     
     if (!isCurrentUserAdmin()) {
         return users; // Chỉ admin mới được xem danh sách
-    }    try {
-        auto uniqueUsers = dataManager->loadAllUsers();
-        // Convert unique_ptr to shared_ptr
-        for (auto& uniqueUser : uniqueUsers) {
-            users.push_back(std::shared_ptr<User>(uniqueUser.release()));
-        }
+    }
+    
+    try {
+        users = dataManager->loadAllUsers();
     }
     catch (const std::exception& e) {
         std::cerr << "Lỗi tải danh sách user: " << e.what() << std::endl;

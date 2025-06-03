@@ -28,8 +28,8 @@ int getch() {
 
 UserInterface::UserInterface(AuthSystem& authSys) 
     : authSystem(authSys), isRunning(false) {
-    // Initialize WalletManager
-    auto dataManager = std::make_shared<DataManager>();
+    // Initialize WalletManager using the DatabaseManager from AuthSystem
+    auto dataManager = authSystem.getDataManager();
     auto otpManager = std::make_shared<OTPManager>();
     walletManager = std::unique_ptr<WalletManager>(new WalletManager(dataManager, otpManager));
 }
@@ -839,14 +839,14 @@ void UserInterface::createManualBackup() {
         // Get DataManager through AuthSystem
         auto dataManager = authSystem.getDataManager();
         if (dataManager) {
-            BackupInfo backupInfo = dataManager->createBackup(BackupType::MANUAL, description);
+            bool success = dataManager->createBackup(description, BackupType::MANUAL);
             
-            showSuccess("Backup created successfully!");
-            std::cout << "\nBackup Details:\n";
-            std::cout << "- Backup ID: " << backupInfo.backupId << "\n";
-            std::cout << "- Filename: " << backupInfo.filename << "\n";
-            std::cout << "- Size: " << formatFileSize(backupInfo.fileSize) << "\n";
-            std::cout << "- Created: " << formatDateTime(backupInfo.timestamp) << "\n";
+            if (success) {
+                showSuccess("Backup created successfully!");
+                std::cout << "\nBackup created with description: " << description << "\n";
+            } else {
+                showError("Failed to create backup!");
+            }
         } else {
             showError("Unable to access data manager!");
         }
@@ -963,7 +963,7 @@ void UserInterface::restoreFromBackup() {
         }
 
         showInfo("Creating safety backup of current data...");
-        dataManager->createBackup(BackupType::EMERGENCY, "Pre-restore backup");
+        dataManager->createBackup("Pre-restore backup", BackupType::EMERGENCY);
         
         showInfo("Restoring from backup...");
         bool success = dataManager->restoreFromBackup(selectedBackup.backupId);

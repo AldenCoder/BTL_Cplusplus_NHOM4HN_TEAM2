@@ -11,7 +11,7 @@
 #include "../models/Wallet.h"
 #include "../security/SecurityUtils.h"
 #include "../security/OTPManager.h"
-#include "../storage/DataManager.h"
+#include "../storage/DatabaseManager.h"
 #include <memory>
 #include <unordered_map>
 #include <string>
@@ -49,12 +49,12 @@ struct RegistrationResult {
  */
 class AuthSystem {
 private:
-    std::shared_ptr<DataManager> dataManager;    // Data manager
-    std::shared_ptr<OTPManager> otpManager;      // OTP manager
-    std::shared_ptr<User> currentUser;           // Currently logged in user
+    std::shared_ptr<DatabaseManager> dataManager;    // Database manager
+    std::shared_ptr<OTPManager> otpManager;           // OTP manager
+    std::shared_ptr<User> currentUser;                // Currently logged in user
     std::unordered_map<std::string, std::shared_ptr<User>> userCache; // User cache
     
-    bool isInitialized;                          // System initialized or not
+    bool isInitialized;                               // System initialized or not
 
 public:
     /**
@@ -173,7 +173,7 @@ public:
      * @brief Get data manager
      * @return Shared pointer to data manager
      */
-    std::shared_ptr<DataManager> getDataManager() const { return dataManager; }    /**
+    std::shared_ptr<DatabaseManager> getDataManager() const { return dataManager; }    /**
      * @brief Find user by username
      * @param username Login username
      * @return Shared pointer to user (nullptr if not found)

@@ -10,7 +10,7 @@
 #include "../models/Wallet.h"
 #include "../security/SecurityUtils.h"
 #include "../security/OTPManager.h"
-#include "../storage/DataManager.h"
+#include "../storage/DatabaseManager.h"
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -52,22 +52,22 @@ struct TransferResult {
  */
 class WalletManager {
 private:
-    std::shared_ptr<DataManager> dataManager;    // Quản lý dữ liệu
-    std::shared_ptr<OTPManager> otpManager;      // Quản lý OTP
-    std::unique_ptr<MasterWallet> masterWallet;  // Ví tổng
+    std::shared_ptr<DatabaseManager> dataManager;    // Database manager
+    std::shared_ptr<OTPManager> otpManager;           // Quản lý OTP
+    std::unique_ptr<MasterWallet> masterWallet;       // Ví tổng
     
     std::unordered_map<std::string, std::shared_ptr<Wallet>> walletCache; // Cache ví
-    // std::mutex transferMutex;                    // Mutex cho giao dịch thread-safe - temporarily disabled for MinGW compatibility
+    // std::mutex transferMutex;                     // Mutex cho giao dịch thread-safe - temporarily disabled for MinGW compatibility
     
-    static const double INITIAL_USER_POINTS;     // Điểm khởi tạo cho user mới
+    static const double INITIAL_USER_POINTS;          // Điểm khởi tạo cho user mới
 
 public:
     /**
      * @brief Constructor
-     * @param dataManager Quản lý dữ liệu
+     * @param dataManager Database manager
      * @param otpManager Quản lý OTP
      */
-    WalletManager(std::shared_ptr<DataManager> dataManager, 
+    WalletManager(std::shared_ptr<DatabaseManager> dataManager, 
                   std::shared_ptr<OTPManager> otpManager);
 
     /**
