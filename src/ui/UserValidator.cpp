@@ -17,7 +17,7 @@ bool UserValidator::isValidUsername(const std::string& username) {
 
 bool UserValidator::isValidFullName(const std::string& fullName) {
     if (fullName.empty() || fullName.length() > 30) return false;
-    std::regex fullNameRegex(R"(^[a-zA-Z\s]{0,30}$)");
+    std::regex fullNameRegex(R"(^[a-zA-Z_]{0,30}$)");
     if (!std::regex_match(fullName, fullNameRegex)) return false;
     if (fullName.find("..") != std::string::npos) return false;
     if (fullName[0] == '.' || fullName[fullName.length()-1] == '.') return false;
@@ -53,5 +53,15 @@ bool UserValidator::isValidPhoneNumber(const std::string& phone) {
 }
 
 bool UserValidator::validateStrongPassword(const std::string& password) {
-    return SecurityUtils::isStrongPassword(password);
+    if (password.length() < 8) return false;
+
+    std::regex lowercase("[a-z]");
+    std::regex uppercase("[A-Z]");
+    std::regex digit("[0-9]");
+    std::regex special("[^a-zA-Z0-9]");
+
+    return std::regex_search(password, lowercase) &&
+           std::regex_search(password, uppercase) &&
+           std::regex_search(password, digit) &&
+           std::regex_search(password, special);
 }
