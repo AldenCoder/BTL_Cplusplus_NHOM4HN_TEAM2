@@ -4,13 +4,14 @@
 #include <iomanip>
 #include <sstream>
 #include <regex>
-// #include <conio.h>  // For Windows
-#include <termios.h>  // For macOS/Linux
+#include <conio.h>  // For Windows
+// #include <termios.h>  // For macOS/Linux
 #include <unistd.h>
 // #include <sys/ioctl.h>
 #include <limits>
 #include <algorithm>
 #include <cctype>
+#include "UserValidator.h"
 
 #ifndef _WIN32 //for mac
 int getch() {
@@ -243,43 +244,98 @@ void UserInterface::registerScreen() {
     std::cout << "|                  REGISTER                        |\n";
     std::cout << "+--------------------------------------------------+\n\n";
 
+    // Validate username
     std::string username;
+    int attempts = 0;
     do {
         username = getInput("Username (3-20 characters): ");
         if (username.empty()) return;
-        if (authSystem.isUsernameExists(username)) {
+        if (!UserValidator::isValidUsername(username)) {
+            showError("Invalid username! Must be 3-20 characters long.");
+            username = "";
+            attempts++;
+            if (attempts >= 3) {
+                showError("Too many invalid attempts! Returning to main menu.");
+                return;
+            }
+        } else if (authSystem.isUsernameExists(username)) {
             showError("Username exists, enter a different username!");
+            username = "";
+            attempts++;
+            if (attempts >= 3) {
+                showError("Too many invalid attempts! Returning to main menu.");
+                return;
+            }
         }
-    } while (authSystem.isUsernameExists(username));
+    } while (username.empty());
 
-    std::string fullName = getInput("Full name: ");
-    if (fullName.empty()) return;
+    // Validate full name
+    std::string fullName; 
+    attempts = 0;
+    do {
+        fullName = getInput("Full name( < 30 characters):");
+        if (fullName.empty()) return;
+        if (!UserValidator::isValidFullName(fullName)) {
+            showError("Invalid full name! Must be < 30 characters long.");
+            fullName = "";
+            attempts++;
+            if (attempts >= 3) {
+                showError("Too many invalid attempts! Returning to main menu.");
+                return;
+            }
+        }
+    } while (fullName.empty());
 
+    // Validate email
     std::string email;
+    attempts = 0;
     do {
         email = getInput("Email: ");
         if (email.empty()) return;
-        if (!isValidEmail(email)) {
-            showError("Invalid email!");
+        if (!UserValidator::isValidEmail(email)) {
+            showError("Invalid email format! Please enter a valid email.");
             email = "";
+            attempts++;
+            if (attempts >= 3) {
+                showError("Too many invalid attempts! Returning to main menu.");
+                return;
+            }
         }
     } while (email.empty());
 
+    // Validate phone number
     std::string phoneNumber;
+    attempts = 0;
     do {
         phoneNumber = getInput("Phone number (10-11 digits): ");
         if (phoneNumber.empty()) return;
-        if (!isValidPhoneNumber(phoneNumber)) {
-            showError("Invalid phone number!");
+        if (!UserValidator::isValidPhoneNumber(phoneNumber)) {
+            showError("Invalid phone number format! Please enter a valid phone number.");
             phoneNumber = "";
+            attempts++;
+            if (attempts >= 3) {
+                showError("Too many invalid attempts! Returning to main menu.");
+                return;
+            }
         }
     } while (phoneNumber.empty());
 
+    // Validate password
     std::string password;
+    attempts = 0;
     do {
         password = getPassword("Password (at least 8 characters): ");
         if (password.empty()) return;
-    } while (!validateStrongPassword(password));
+        if (!UserValidator::validateStrongPassword(password)) {
+            showError("Weak password! Please enter a stronger password.");
+            password = "";
+            attempts++;
+            if (attempts >= 3) {
+                showError("Too many invalid attempts! Returning to main menu.");
+                return;
+            }
+        }
+    } while (password.empty());
     std::string confirmPassword = getPassword("Confirm password: ");
     if (confirmPassword != password) {
         showError("Password confirmation does not match!");
@@ -334,10 +390,20 @@ void UserInterface::changePassword() {
     
     std::string oldPassword = getPassword("Current password: ");
     std::string newPassword;
+    int attempts = 0;
     do {
         newPassword = getPassword("New password (at least 8 characters): ");
         if (newPassword.empty()) return;
-    } while (!validateStrongPassword(newPassword));
+        if (!UserValidator::validateStrongPassword(newPassword)) {
+            showError("Weak password! Please enter a stronger password.");
+            newPassword = "";
+            attempts++;
+            if (attempts >= 3) {
+                showError("Too many invalid attempts! Returning to main menu.");
+                return;
+            }
+        }
+    } while (newPassword.empty());
     std::string confirmPassword = getPassword("Confirm new password: ");
     
     if (newPassword != confirmPassword) {
@@ -360,8 +426,8 @@ void UserInterface::changePassword() {
 void UserInterface::updateProfile() {
     clearScreen();
     showHeader();
-      std::cout << "+--------------------------------------------------+\n";
-    std::cout << "|              UPDATE PERSONAL INFO               |\n";
+    std::cout << "+--------------------------------------------------+\n";
+    std::cout << "|              UPDATE PERSONAL INFO                |\n";
     std::cout << "+--------------------------------------------------+\n\n";
 
     auto user = authSystem.getCurrentUser();
@@ -370,26 +436,66 @@ void UserInterface::updateProfile() {
     displayUserInfo(*user);
     std::cout << "\n";
 
-    std::string newFullName = getInput("New full name (Enter to keep current): ");
-    if (newFullName.empty()) newFullName = user->getFullName();
+    int attempts;
+    // Validate full name
+    std::string newFullName;
+    attempts = 0;
+    do {
+        newFullName = getInput("New full name (Enter to keep current): ");
+        if (newFullName.empty()) {
+            newFullName = user->getFullName();
+            break;
+        }
+        if (!UserValidator::isValidFullName(newFullName)) {
+            showError("Invalid full name! Must be < 30 characters long.");
+            newFullName = "";
+            attempts++;
+            if (attempts >= 3) {
+                showError("Too many invalid attempts! Returning to main menu.");
+                return;
+            }
+        }
+    } while (newFullName.empty());
 
-    std::string newEmail = getInput("New email (Enter to keep current): ");
-    if (newEmail.empty()) {
-        newEmail = user->getEmail();
-    } else if (!isValidEmail(newEmail)) {
-        showError("Invalid email!");
-        pauseScreen();
-        return;
-    }
+    // Validate email
+    std::string newEmail;
+    attempts = 0;
+    do {
+        newEmail = getInput("New email (Enter to keep current): ");
+        if (newEmail.empty()) {
+            newEmail = user->getEmail();
+            break;
+        }
+        if (!UserValidator::isValidEmail(newEmail)) {
+            showError("Invalid email format! Please enter a valid email.");
+            newEmail = "";
+            attempts++;
+            if (attempts >= 3) {
+                showError("Too many invalid attempts! Returning to main menu.");
+                return;
+            }
+        }
+    } while (newEmail.empty());
 
-    std::string newPhoneNumber = getInput("New phone number (Enter to keep current): ");
-    if (newPhoneNumber.empty()) {
-        newPhoneNumber = user->getPhoneNumber();
-    } else if (!isValidPhoneNumber(newPhoneNumber)) {
-        showError("Invalid phone number!");
-        pauseScreen();
-        return;
-    }
+    // Validate phone number
+    std::string newPhoneNumber;
+    attempts = 0;
+    do {
+        newPhoneNumber = getInput("New phone number (Enter to keep current): ");
+        if (newPhoneNumber.empty()) {
+            newPhoneNumber = user->getPhoneNumber();
+            break;
+        }
+        if (!UserValidator::isValidPhoneNumber(newPhoneNumber)) {
+            showError("Invalid phone number format! Please enter a valid phone number.");
+            newPhoneNumber = "";
+            attempts++;
+            if (attempts >= 3) {
+                showError("Too many invalid attempts! Returning to main menu.");
+                return;
+            }
+        }
+    } while (newPhoneNumber.empty());
 
     // Request OTP
     showInfo("Generating OTP code...");
@@ -652,34 +758,85 @@ void UserInterface::createNewAccount() {
     std::cout << "|               CREATE NEW ACCOUNT                 |\n";
     std::cout << "+--------------------------------------------------+\n\n";
 
-    std::string username = getInput("Username: ");
-    if (username.empty()) return;
+    // Validate username
+    std::string username;
+    int attempts = 0;
+    do {
+        username = getInput("Username (3-20 characters): ");
+        if (username.empty()) return;
+        if (!UserValidator::isValidUsername(username)) {
+            showError("Invalid username! Must be 3-20 characters long.");
+            username = "";
+            attempts++;
+            if (attempts >= 3) {
+                showError("Too many invalid attempts! Returning to main menu.");
+                return;
+            }
+        } else if (authSystem.isUsernameExists(username)) {
+            showError("Username exists, enter a different username!");
+            username = "";
+            attempts++;
+            if (attempts >= 3) {
+                showError("Too many invalid attempts! Returning to main menu.");
+                return;
+            }
+        }
+    } while (username.empty());
 
-    std::string fullName = getInput("Full name: ");
-    if (fullName.empty()) return;
+    // Validate full name
+    std::string fullName; 
+    attempts = 0;
+    do {
+        fullName = getInput("Full name( < 30 characters):");
+        if (fullName.empty()) return;
+        if (!UserValidator::isValidFullName(fullName)) {
+            showError("Invalid full name! Must be < 30 characters long.");
+            fullName = "";
+            attempts++;
+            if (attempts >= 3) {
+                showError("Too many invalid attempts! Returning to main menu.");
+                return;
+            }
+        }
+    } while (fullName.empty());
 
+    // Validate email
     std::string email;
+    attempts = 0;
     do {
         email = getInput("Email: ");
         if (email.empty()) return;
-        if (!isValidEmail(email)) {
-            showError("Invalid email!");
+        if (!UserValidator::isValidEmail(email)) {
+            showError("Invalid email format! Please enter a valid email.");
             email = "";
+            attempts++;
+            if (attempts >= 3) {
+                showError("Too many invalid attempts! Returning to main menu.");
+                return;
+            }
         }
     } while (email.empty());
 
+    // Validate phone number
     std::string phoneNumber;
+    attempts = 0;
     do {
-        phoneNumber = getInput("Phone number: ");
+        phoneNumber = getInput("Phone number (10-11 digits): ");
         if (phoneNumber.empty()) return;
-        if (!isValidPhoneNumber(phoneNumber)) {
-            showError("Invalid phone number!");
+        if (!UserValidator::isValidPhoneNumber(phoneNumber)) {
+            showError("Invalid phone number format! Please enter a valid phone number.");
             phoneNumber = "";
+            attempts++;
+            if (attempts >= 3) {
+                showError("Too many invalid attempts! Returning to main menu.");
+                return;
+            }
         }
     } while (phoneNumber.empty());
 
-    std::vector<std::string> roleOptions = {"Regular User", "Admin"};
+    std::vector<std::string> roleOptions = {"Regular User", "Admin", "Exit"};
     int roleChoice = showMenuSelection("Select role:", roleOptions);
+    if (roleChoice == 3) return;
     UserRole role = (roleChoice == 2) ? UserRole::ADMIN : UserRole::REGULAR;    showInfo("Creating account...");
     
     auto result = authSystem.createAccount(username, fullName, email, phoneNumber, role, true);
@@ -1183,48 +1340,6 @@ void UserInterface::showSeparator() {
     std::cout << std::string(54, '=') << std::endl;
 }
 
-bool UserInterface::isValidEmail(const std::string& email) {
-    // Enhanced email validation
-    if (email.empty() || email.length() > 254) return false;
-    
-    // Check for basic format
-    std::regex emailRegex(R"([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})");
-    if (!std::regex_match(email, emailRegex)) return false;
-    
-    // Additional checks
-    if (email.find("..") != std::string::npos) return false;  // No consecutive dots
-    if (email[0] == '.' || email[email.length()-1] == '.') return false;  // No dots at start/end
-    if (email.find('@') == 0 || email.find('@') == email.length()-1) return false;  // @ not at edges
-    
-    return true;
-}
-
-bool UserInterface::isValidPhoneNumber(const std::string& phone) {
-    // Enhanced phone validation for Vietnamese phone numbers
-    if (phone.empty()) return false;
-    
-    // Remove common separators for validation
-    std::string cleanPhone = phone;
-    cleanPhone.erase(std::remove_if(cleanPhone.begin(), cleanPhone.end(), 
-        [](char c) { return c == ' ' || c == '-' || c == '(' || c == ')' || c == '+'; }), 
-        cleanPhone.end());
-    
-    // Check if all remaining characters are digits
-    if (!std::all_of(cleanPhone.begin(), cleanPhone.end(), ::isdigit)) return false;
-      // Vietnamese phone number patterns
-    std::vector<std::regex> phonePatterns = {
-        std::regex(R"(^84[0-9]{9,10}$)"),    // +84 country code
-        std::regex(R"(^0[0-9]{9,10}$)"),     // Starting with 0
-        std::regex(R"(^[0-9]{10,11}$)")      // 10-11 digits
-    };
-    
-    for (const auto& pattern : phonePatterns) {
-        if (std::regex_match(cleanPhone, pattern)) return true;
-    }
-    
-    return false;
-}
-
 std::string UserInterface::formatCurrency(double amount) {
     std::ostringstream oss;
     oss << std::fixed << std::setprecision(2) << amount << " points";
@@ -1288,12 +1403,4 @@ int UserInterface::showMenuSelection(const std::string& title, const std::vector
     }
     
     return getIntInput("Choose: ", 1, static_cast<int>(options.size()));
-}
-
-bool UserInterface::validateStrongPassword(const std::string& password) {
-    if (!SecurityUtils::isStrongPassword(password)) {
-        showError("Password must be at least 8 characters and contain upper, lower, digit, and special character!");
-        return false;
-    }
-    return true;
 }
