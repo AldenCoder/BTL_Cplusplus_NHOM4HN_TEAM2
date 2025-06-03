@@ -298,6 +298,10 @@ private:
      * @return User's choice (1-based index)
      */
     int showMenuSelection(const std::string& title, const std::vector<std::string>& options);
+
+    // Helper template to reduce duplicate input-validation code
+    template<typename Validator>
+    std::string getValidatedInput(const std::string& prompt, Validator validator, const std::string& errorMsg = "", int maxAttempts = 3);
 };
 
 #endif // USER_INTERFACE_H

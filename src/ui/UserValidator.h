@@ -1,7 +1,8 @@
 // UserValidator.h
 #pragma once
-
 #include <string>
+#include <functional>
+#include "../models/User.h"
 
 class UserValidator {
 public:
