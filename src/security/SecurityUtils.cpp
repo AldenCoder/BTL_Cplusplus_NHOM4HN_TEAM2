@@ -9,7 +9,6 @@
 #include <iomanip>
 #include <algorithm>
 #include <functional>  // For std::hash
-#include <regex>
 // Removed OpenSSL includes for simple compilation
 
 // Initialize static members

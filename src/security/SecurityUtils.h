@@ -64,7 +64,7 @@ public:
      */
     static std::string generatePassword(int length = 12, 
                                        bool includeSpecialChars = true);
-                                       
+
     /**
      * @brief Tạo OTP cho user
      * @param userId ID người dùng
