@@ -39,30 +39,24 @@ UserInterface::~UserInterface() {
 }
 
 void UserInterface::run() {
-    std::cout << "[DEBUG] Starting UserInterface::run()" << std::endl;
-    
     // Initialize system
     if (!authSystem.initialize()) {
         showError("Cannot initialize authentication system!");
         return;
     }
-    std::cout << "[DEBUG] AuthSystem initialized successfully" << std::endl;
 
     if (!walletManager->initialize()) {
         showError("Cannot initialize wallet system!");
         return;
     }
-    std::cout << "[DEBUG] WalletManager initialized successfully" << std::endl;
 
     isRunning = true;
     clearScreen();
     showHeader();
     showSuccess("System is ready!");
 
-    std::cout << "[DEBUG] Starting main loop..." << std::endl;
     while (isRunning) {
         try {
-            std::cout << "[DEBUG] Loop iteration - isLoggedIn: " << authSystem.isLoggedIn() << std::endl;
             if (!authSystem.isLoggedIn()) {
                 showMainMenu();
             } else {
@@ -78,7 +72,6 @@ void UserInterface::run() {
             pauseScreen();
         }
     }
-    std::cout << "[DEBUG] Exiting main loop" << std::endl;
 }
 
 // ==================== MENU FUNCTIONS ====================
@@ -1199,7 +1192,7 @@ void UserInterface::clearScreen() {
 
 void UserInterface::showHeader() {
     std::cout << "+--------------------------------------------------+\n";
-    std::cout << "|        WALLET POINT MANAGEMENT SYSTEM           |\n";
+    std::cout << "|        WALLET POINT MANAGEMENT SYSTEM            |\n";
     std::cout << "|                   Team 2C                        |\n";
     std::cout << "+--------------------------------------------------+\n\n";
 }
@@ -1348,7 +1341,7 @@ void UserInterface::searchUserByUsername() {
     }
     
     // Display user information
-    std::cout << "\n ╭─────────────────────────────────────────────────────────╮\n";
+    std::cout << " ╭─────────────────────────────────────────────────────────╮\n";
     std::cout << " │                   USER INFORMATION                      │\n";
     std::cout << " ╰─────────────────────────────────────────────────────────╯\n\n";
     
@@ -1571,7 +1564,7 @@ void UserInterface::viewUserWalletDetails() {
         return;
     }
     
-    std::cout << "\n ╭─────────────────────────────────────────────────────────╮\n";
+    std::cout << " ╭─────────────────────────────────────────────────────────╮\n";
     std::cout << " │                   WALLET INFORMATION                    │\n";
     std::cout << " ╰─────────────────────────────────────────────────────────╯\n\n";
     

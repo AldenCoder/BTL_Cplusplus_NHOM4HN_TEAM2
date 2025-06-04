@@ -21,31 +21,20 @@ WalletManager::WalletManager(std::shared_ptr<DatabaseManager> dataManager,
 
 bool WalletManager::initialize() {
     try {
-        std::cout << "[DEBUG] Starting WalletManager initialization..." << std::endl;
-        
         // Initialize master wallet
         masterWallet = std::unique_ptr<MasterWallet>(new MasterWallet(10000000.0)); // 10 million initial points
-        std::cout << "[DEBUG] Master wallet created successfully" << std::endl;
         
         // Load all wallets from storage into cache
         auto wallets = dataManager->loadAllWallets();
-        std::cout << "[DEBUG] Loaded " << wallets.size() << " wallets from storage" << std::endl;
         
         for (auto& wallet : wallets) {
             if (wallet) {
                 std::string walletId = wallet->getId();
-                std::cout << "[DEBUG] Processing wallet " << walletId << std::endl;
-                
                 // Wallet is already shared_ptr from DatabaseManager
                 walletCache[walletId] = wallet;
-                
-                std::cout << "[DEBUG] Added wallet " << walletId << " to cache" << std::endl;
-            } else {
-                std::cout << "[DEBUG] Warning: null wallet found in loadAllWallets result" << std::endl;
             }
         }
 
-        std::cout << "[DEBUG] WalletManager initialization completed successfully" << std::endl;
         return true;
     }
     catch (const std::exception& e) {
@@ -56,24 +45,17 @@ bool WalletManager::initialize() {
 
 bool WalletManager::createUserWallet(const std::string& userId, const std::string& walletId) {
     try {
-        std::cout << "[DEBUG] createUserWallet called for userId: " << userId 
-                  << ", walletId: " << walletId << std::endl;
-        
         // Kiểm tra ví đã tồn tại chưa
         if (walletExists(walletId)) {
-            std::cout << "[DEBUG] Wallet already exists, returning false" << std::endl;
             return false;
         }
         
-        std::cout << "[DEBUG] Creating new wallet with " << INITIAL_USER_POINTS << " initial points" << std::endl;
         // Tạo ví mới với số điểm khởi tạo
         auto wallet = std::shared_ptr<Wallet>(new Wallet(walletId, userId, INITIAL_USER_POINTS));
         // ID is already set in constructor
 
-        std::cout << "[DEBUG] Calling dataManager->saveWallet..." << std::endl;
         // Lưu vào storage
         if (dataManager->saveWallet(wallet)) {
-            std::cout << "[DEBUG] saveWallet returned true, adding to cache..." << std::endl;
             // Thêm vào cache
             walletCache[walletId] = wallet;
             
@@ -89,7 +71,6 @@ bool WalletManager::createUserWallet(const std::string& userId, const std::strin
             );
             wallet->addTransaction(initTransaction);
             
-            std::cout << "[DEBUG] createUserWallet completed successfully!" << std::endl;
             return true;
         } else {
             std::cerr << "[ERROR] dataManager->saveWallet returned false!" << std::endl;
@@ -124,7 +105,11 @@ std::shared_ptr<Wallet> WalletManager::getWalletByUserId(const std::string& user
         }
 
         // Tải từ storage
-        return dataManager->loadWalletByOwnerId(userId);
+        auto wallet = dataManager->loadWalletByOwnerId(userId);
+        if (wallet) {
+            walletCache[wallet->getId()] = wallet;
+        }
+        return wallet;
     }
     catch (const std::exception& e) {
         std::cerr << "Lỗi tìm ví theo user ID: " << e.what() << std::endl;

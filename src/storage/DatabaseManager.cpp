@@ -192,8 +192,10 @@ sqlite3_stmt* DatabaseManager::prepareStatement(const std::string& sql) {
 
 bool DatabaseManager::executeStatement(sqlite3_stmt* stmt) {
     int rc = sqlite3_step(stmt);
+    
     if (rc != SQLITE_DONE && rc != SQLITE_ROW) {
-        std::cerr << "[ERROR] SQL execution failed: " << sqlite3_errmsg(db) << std::endl;
+        std::cerr << "[ERROR] SQL execution failed: " << sqlite3_errmsg(db) 
+                  << " (error code: " << rc << ")" << std::endl;
         return false;
     }
     return true;
@@ -243,37 +245,96 @@ bool DatabaseManager::rollbackTransaction() {
 bool DatabaseManager::saveUser(const User& user) {
     std::lock_guard<std::mutex> lock(dbMutex);
     
-    const char* sql = R"(
-        INSERT OR REPLACE INTO users 
-        (user_id, username, password_hash, full_name, email, phone_number, 
-         role, is_password_generated, is_first_login, wallet_id, created_at, last_login)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-    )";
+    // Start explicit transaction
+    if (!beginTransaction()) {
+        return false;
+    }
+    
+    // Check if user exists first
+    const char* checkSql = "SELECT COUNT(*) FROM users WHERE user_id = ?;";
+    sqlite3_stmt* checkStmt = prepareStatement(checkSql);
+    if (!checkStmt) {
+        rollbackTransaction();
+        return false;
+    }
+    
+    sqlite3_bind_text(checkStmt, 1, user.getUserId().c_str(), -1, SQLITE_STATIC);
+    bool userExists = false;
+    if (sqlite3_step(checkStmt) == SQLITE_ROW) {
+        userExists = sqlite3_column_int(checkStmt, 0) > 0;
+    }
+    finalizeStatement(checkStmt);
+    
+    const char* sql;
+    if (userExists) {
+        // Update existing user - this preserves the user_id and won't trigger CASCADE DELETE
+        sql = R"(
+            UPDATE users SET 
+                username = ?, password_hash = ?, full_name = ?, email = ?, phone_number = ?, 
+                role = ?, is_password_generated = ?, is_first_login = ?, wallet_id = ?, 
+                created_at = ?, last_login = ?
+            WHERE user_id = ?;
+        )";
+    } else {
+        // Insert new user
+        sql = R"(
+            INSERT INTO users 
+            (user_id, username, password_hash, full_name, email, phone_number, 
+             role, is_password_generated, is_first_login, wallet_id, created_at, last_login)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        )";
+    }
     
     sqlite3_stmt* stmt = prepareStatement(sql);
-    if (!stmt) return false;
+    if (!stmt) {
+        rollbackTransaction();
+        return false;
+    }
     
-    // Bind parameters
-    sqlite3_bind_text(stmt, 1, user.getUserId().c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 2, user.getUsername().c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 3, user.getPasswordHash().c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 4, user.getFullName().c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 5, user.getEmail().c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 6, user.getPhoneNumber().c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_int(stmt, 7, static_cast<int>(user.getRole()));
-    sqlite3_bind_int(stmt, 8, user.getIsPasswordGenerated() ? 1 : 0);
-    sqlite3_bind_int(stmt, 9, user.getIsFirstLogin() ? 1 : 0);
-    sqlite3_bind_text(stmt, 10, user.getWalletId().c_str(), -1, SQLITE_STATIC);
     // Convert time_point to unix timestamp
     auto createdAt = std::chrono::duration_cast<std::chrono::seconds>(
         user.getCreatedAt().time_since_epoch()).count();
     auto lastLogin = std::chrono::duration_cast<std::chrono::seconds>(
         user.getLastLogin().time_since_epoch()).count();
-    sqlite3_bind_int64(stmt, 11, createdAt);
-    sqlite3_bind_int64(stmt, 12, lastLogin);
+    
+    if (userExists) {
+        // Bind parameters for UPDATE (user_id is in WHERE clause, so it's last)
+        sqlite3_bind_text(stmt, 1, user.getUsername().c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 2, user.getPasswordHash().c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 3, user.getFullName().c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 4, user.getEmail().c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 5, user.getPhoneNumber().c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_int(stmt, 6, static_cast<int>(user.getRole()));
+        sqlite3_bind_int(stmt, 7, user.getIsPasswordGenerated() ? 1 : 0);
+        sqlite3_bind_int(stmt, 8, user.getIsFirstLogin() ? 1 : 0);
+        sqlite3_bind_text(stmt, 9, user.getWalletId().c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_int64(stmt, 10, createdAt);
+        sqlite3_bind_int64(stmt, 11, lastLogin);
+        sqlite3_bind_text(stmt, 12, user.getUserId().c_str(), -1, SQLITE_STATIC);  // WHERE clause
+    } else {
+        // Bind parameters for INSERT
+        sqlite3_bind_text(stmt, 1, user.getUserId().c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 2, user.getUsername().c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 3, user.getPasswordHash().c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 4, user.getFullName().c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 5, user.getEmail().c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 6, user.getPhoneNumber().c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_int(stmt, 7, static_cast<int>(user.getRole()));
+        sqlite3_bind_int(stmt, 8, user.getIsPasswordGenerated() ? 1 : 0);
+        sqlite3_bind_int(stmt, 9, user.getIsFirstLogin() ? 1 : 0);
+        sqlite3_bind_text(stmt, 10, user.getWalletId().c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_int64(stmt, 11, createdAt);
+        sqlite3_bind_int64(stmt, 12, lastLogin);
+    }
     
     bool success = executeStatement(stmt);
     finalizeStatement(stmt);
+    
+    if (success) {
+        commitTransaction();
+    } else {
+        rollbackTransaction();
+    }
     
     return success;
 }
@@ -414,12 +475,14 @@ bool DatabaseManager::deleteUser(const std::string& userId) {
 bool DatabaseManager::saveWallet(const Wallet& wallet) {
     std::lock_guard<std::mutex> lock(dbMutex);
     
-    std::cout << "[DEBUG] saveWallet called for wallet_id: " << wallet.getWalletId() 
-              << ", owner_id: " << wallet.getOwnerId() 
-              << ", balance: " << wallet.getBalance() << std::endl;
-    
     if (!db) {
         std::cerr << "[ERROR] Database connection is null!" << std::endl;
+        return false;
+    }
+    
+    // Start explicit transaction
+    if (!beginTransaction()) {
+        std::cerr << "[ERROR] Failed to begin transaction!" << std::endl;
         return false;
     }
     
@@ -429,14 +492,13 @@ bool DatabaseManager::saveWallet(const Wallet& wallet) {
         VALUES (?, ?, ?, ?, ?);
     )";
     
-    std::cout << "[DEBUG] Preparing SQL statement..." << std::endl;
     sqlite3_stmt* stmt = prepareStatement(sql);
     if (!stmt) {
         std::cerr << "[ERROR] Failed to prepare statement!" << std::endl;
+        rollbackTransaction();
         return false;
     }
     
-    std::cout << "[DEBUG] Binding parameters..." << std::endl;
     sqlite3_bind_text(stmt, 1, wallet.getWalletId().c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt, 2, wallet.getOwnerId().c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_double(stmt, 3, wallet.getBalance());
@@ -446,16 +508,55 @@ bool DatabaseManager::saveWallet(const Wallet& wallet) {
     sqlite3_bind_int64(stmt, 4, now);
     sqlite3_bind_int(stmt, 5, wallet.getIsLocked() ? 1 : 0);
     
-    std::cout << "[DEBUG] Executing statement..." << std::endl;
     bool success = executeStatement(stmt);
-    std::cout << "[DEBUG] Statement execution result: " << (success ? "SUCCESS" : "FAILED") << std::endl;
-    
     finalizeStatement(stmt);
     
     if (success) {
-        std::cout << "[DEBUG] Wallet saved successfully to database!" << std::endl;
+        if (commitTransaction()) {
+            // Force WAL checkpoint to ensure data is written to main database
+            char* errMsg = nullptr;
+            int rc = sqlite3_exec(db, "PRAGMA wal_checkpoint(FULL);", nullptr, nullptr, &errMsg);
+            if (rc != SQLITE_OK) {
+                std::cerr << "[WARNING] WAL checkpoint failed: " << errMsg << std::endl;
+                sqlite3_free(errMsg);
+            }
+            
+            // Verify wallet was actually saved by immediately querying it
+            const char* verifySql = "SELECT COUNT(*) FROM wallets WHERE wallet_id = ?;";
+            sqlite3_stmt* verifyStmt = prepareStatement(verifySql);
+            if (verifyStmt) {
+                sqlite3_bind_text(verifyStmt, 1, wallet.getWalletId().c_str(), -1, SQLITE_STATIC);
+                if (sqlite3_step(verifyStmt) == SQLITE_ROW) {
+                    int count = sqlite3_column_int(verifyStmt, 0);
+                    if (count == 0) {
+                        std::cerr << "[ERROR] CRITICAL: Wallet was not actually saved to database!" << std::endl;
+                    }
+                }
+                finalizeStatement(verifyStmt);
+            }
+            
+            // Also verify that owner_id exists in users table (foreign key check)
+            const char* fkSql = "SELECT COUNT(*) FROM users WHERE user_id = ?;";
+            sqlite3_stmt* fkStmt = prepareStatement(fkSql);
+            if (fkStmt) {
+                sqlite3_bind_text(fkStmt, 1, wallet.getOwnerId().c_str(), -1, SQLITE_STATIC);
+                if (sqlite3_step(fkStmt) == SQLITE_ROW) {
+                    int userCount = sqlite3_column_int(fkStmt, 0);
+                    if (userCount == 0) {
+                        std::cerr << "[ERROR] Foreign key constraint violation: User " << wallet.getOwnerId() << " does not exist!" << std::endl;
+                    }
+                }
+                finalizeStatement(fkStmt);
+            }
+        } else {
+            std::cerr << "[ERROR] Failed to commit transaction!" << std::endl;
+            rollbackTransaction();
+            return false;
+        }
     } else {
         std::cerr << "[ERROR] Failed to save wallet to database!" << std::endl;
+        rollbackTransaction();
+        return false;
     }
     
     return success;
@@ -501,13 +602,18 @@ std::shared_ptr<Wallet> DatabaseManager::loadWalletByOwnerId(const std::string& 
     
     const char* sql = "SELECT * FROM wallets WHERE owner_id = ?;";
     sqlite3_stmt* stmt = prepareStatement(sql);
-    if (!stmt) return nullptr;
+    if (!stmt) {
+        return nullptr;
+    }
     
     sqlite3_bind_text(stmt, 1, ownerId.c_str(), -1, SQLITE_STATIC);
     
     std::shared_ptr<Wallet> wallet = nullptr;
-    if (sqlite3_step(stmt) == SQLITE_ROW) {
+    int result = sqlite3_step(stmt);
+    
+    if (result == SQLITE_ROW) {
         std::string walletId = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+        
         wallet = std::make_shared<Wallet>(
             walletId,                                                    // wallet_id
             reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1)), // owner_id
