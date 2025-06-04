@@ -27,7 +27,7 @@ enum class OTPType {
  */
 class OTPManager {
 private:
-    SecurityUtils* securityUtils;
+    // SecurityUtils* securityUtils;  // Commented out until needed
 
 public:
     /**

@@ -10,8 +10,9 @@
 #include "../models/User.h"
 #include "../models/Wallet.h"
 #include "../security/SecurityUtils.h"
-#include "../security/OTPManager.h"
+#include "../security/OTPManager.h"  
 #include "../storage/DatabaseManager.h"
+#include "WalletManager.h"
 #include <memory>
 #include <unordered_map>
 #include <string>
@@ -51,6 +52,7 @@ class AuthSystem {
 private:
     std::shared_ptr<DatabaseManager> dataManager;    // Database manager
     std::shared_ptr<OTPManager> otpManager;           // OTP manager
+    std::shared_ptr<WalletManager> walletManager;     // Wallet manager
     std::shared_ptr<User> currentUser;                // Currently logged in user
     std::unordered_map<std::string, std::shared_ptr<User>> userCache; // User cache
     

@@ -1,9 +1,7 @@
 # Compiler và flags
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -O2 -g
-# INCLUDES = -Isrc
-INCLUDES = -Isrc -I/opt/homebrew/include -I/usr/local/include
-LDFLAGS = -L/opt/homebrew/lib -L/usr/local/lib
+INCLUDES = -Isrc
 LDFLAGS = -lsqlite3
 
 # Thư mục
@@ -20,7 +18,6 @@ SOURCES = $(SRCDIR)/main.cpp \
           $(SRCDIR)/models/Wallet.cpp \
           $(SRCDIR)/security/OTPManager.cpp \
           $(SRCDIR)/security/SecurityUtils.cpp \
-          $(SRCDIR)/storage/DataManager.cpp \
           $(SRCDIR)/storage/DatabaseManager.cpp \
           $(SRCDIR)/system/AuthSystem.cpp \
           $(SRCDIR)/system/WalletManager.cpp \
@@ -108,4 +105,4 @@ $(OBJDIR)/%.d: $(SRCDIR)/%.cpp
 	@set -e; rm -f $@; \
 	$(CXX) -M $(CXXFLAGS) $(INCLUDES) $< > $@.$$$$; \
 	sed 's,\($*\)\.o[ :]*,$(OBJDIR)/\1.o $@ : ,g' < $@.$$$$ > $@; \
-	rm -f $@.$$$$
+	rm -f $@.$$$$ 

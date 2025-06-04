@@ -105,6 +105,7 @@ public:
     std::vector<Transaction> getTransactionHistory() const { return transactions; } // Overload without parameters
     bool getIsLocked() const { return isLocked; }
     bool isLockedStatus() const { return isLocked; } // Alias for getIsLocked
+    const std::chrono::system_clock::time_point& getCreatedAt() const { return createdAt; }
 
     /**
      * @brief Check if balance is sufficient for transaction

@@ -6,15 +6,17 @@
 
 #include "AuthSystem.h"
 #include "../security/OTPManager.h"
+#include "WalletManager.h"
 #include <iostream>
 #include <algorithm>
 #include <regex>
 
 AuthSystem::AuthSystem() 
-    : isInitialized(false), currentUser(nullptr) {
+    : currentUser(nullptr), isInitialized(false) {
     // Initialize components
     dataManager = std::make_shared<DatabaseManager>();
     otpManager = std::make_shared<OTPManager>();
+    walletManager = std::make_shared<WalletManager>(dataManager, otpManager);
 }
 
 AuthSystem::~AuthSystem() {
@@ -27,6 +29,11 @@ bool AuthSystem::initialize() {
     try {
         if (!dataManager->initialize()) {
             std::cerr << "Error: Cannot initialize DatabaseManager" << std::endl;
+            return false;
+        }
+
+        if (!walletManager->initialize()) {
+            std::cerr << "Error: Cannot initialize WalletManager" << std::endl;
             return false;
         }
 
@@ -65,7 +72,8 @@ RegistrationResult AuthSystem::registerUser(const std::string& username,
     if (password.length() < 8) {
         result.message = "Password must be at least 8 characters!";
         return result;
-    }    try {        // Generate a unique user ID
+    }    try {
+        // Generate a unique user ID
         std::string userId = SecurityUtils::generateUUID();
         
         // Create new user with this ID
@@ -75,27 +83,34 @@ RegistrationResult AuthSystem::registerUser(const std::string& username,
             SecurityUtils::hashPassword(password),
             fullName,
             email,
-            phoneNumber,        UserRole::REGULAR
+            phoneNumber,
+            UserRole::REGULAR
         );
 
-        // Create default wallet with a unique wallet ID
+        // Generate wallet ID
         std::string walletId = SecurityUtils::generateUUID();
-        auto wallet = std::make_shared<Wallet>(walletId, userId, 0.0);
         user->setWalletId(walletId);
-        
-        // Save wallet first
-        dataManager->saveWallet(wallet);
 
-        // Save user
-        if (dataManager->saveUser(user)) {
-            // Add to cache
-            userCache[username] = user;
-            
-            result.success = true;
-            result.message = "Account registered successfully!";
-        } else {
-            result.message = "Error saving user data!";
+        // FIRST: Save user to database (required for foreign key constraint)
+        if (!dataManager->saveUser(user)) {
+            result.message = "Error saving user to database!";
+            return result;
         }
+        
+        // Add to cache
+        userCache[username] = user;
+
+        // SECOND: Create wallet using WalletManager (now that user exists in DB)
+        if (!walletManager->createUserWallet(userId, walletId)) {
+            // If wallet creation fails, we should remove the user from database
+            dataManager->deleteUser(userId);
+            userCache.erase(username);
+            result.message = "Error creating user wallet!";
+            return result;
+        }
+        
+        result.success = true;
+        result.message = "Account registered successfully!";
     }
     catch (const std::exception& e) {
         result.message = "System error: " + std::string(e.what());
@@ -136,7 +151,9 @@ RegistrationResult AuthSystem::createAccount(const std::string& username,
             result.generatedPassword = password;
         } else {
             password = "123456789"; // Default password
-        }        // Generate a unique user ID
+        }
+        
+        // Generate a unique user ID
         std::string userId = SecurityUtils::generateUUID();
         
         // Tạo user mới
@@ -153,24 +170,30 @@ RegistrationResult AuthSystem::createAccount(const std::string& username,
         // Đánh dấu cần đổi mật khẩu
         user->setRequirePasswordChange(true);
 
-        // Tạo ví mặc định with a unique wallet ID
+        // Generate wallet ID
         std::string walletId = SecurityUtils::generateUUID();
-        auto wallet = std::make_shared<Wallet>(walletId, userId, 0.0);
         user->setWalletId(walletId);
-        
-        // Save wallet first
-        dataManager->saveWallet(wallet);
 
-        // Lưu user
-        if (dataManager->saveUser(user)) {
-            // Thêm vào cache
-            userCache[username] = user;
-            
-            result.success = true;
-            result.message = "Account created successfully!";
-        } else {
+        // FIRST: Save user to database (required for foreign key constraint)
+        if (!dataManager->saveUser(user)) {
             result.message = "Error saving user data!";
+            return result;
         }
+        
+        // Add to cache
+        userCache[username] = user;
+
+        // SECOND: Create wallet using WalletManager (now that user exists in DB)
+        if (!walletManager->createUserWallet(userId, walletId)) {
+            // If wallet creation fails, we should remove the user from database
+            dataManager->deleteUser(userId);
+            userCache.erase(username);
+            result.message = "Error creating user wallet!";
+            return result;
+        }
+        
+        result.success = true;
+        result.message = "Account created successfully!";
     }
     catch (const std::exception& e) {
         result.message = "System error: " + std::string(e.what());

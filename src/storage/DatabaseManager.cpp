@@ -192,7 +192,11 @@ sqlite3_stmt* DatabaseManager::prepareStatement(const std::string& sql) {
 
 bool DatabaseManager::executeStatement(sqlite3_stmt* stmt) {
     int rc = sqlite3_step(stmt);
-    return (rc == SQLITE_DONE || rc == SQLITE_ROW);
+    if (rc != SQLITE_DONE && rc != SQLITE_ROW) {
+        std::cerr << "[ERROR] SQL execution failed: " << sqlite3_errmsg(db) << std::endl;
+        return false;
+    }
+    return true;
 }
 
 void DatabaseManager::finalizeStatement(sqlite3_stmt* stmt) {
@@ -410,15 +414,29 @@ bool DatabaseManager::deleteUser(const std::string& userId) {
 bool DatabaseManager::saveWallet(const Wallet& wallet) {
     std::lock_guard<std::mutex> lock(dbMutex);
     
+    std::cout << "[DEBUG] saveWallet called for wallet_id: " << wallet.getWalletId() 
+              << ", owner_id: " << wallet.getOwnerId() 
+              << ", balance: " << wallet.getBalance() << std::endl;
+    
+    if (!db) {
+        std::cerr << "[ERROR] Database connection is null!" << std::endl;
+        return false;
+    }
+    
     const char* sql = R"(
         INSERT OR REPLACE INTO wallets 
         (wallet_id, owner_id, balance, created_at, is_locked)
         VALUES (?, ?, ?, ?, ?);
     )";
     
+    std::cout << "[DEBUG] Preparing SQL statement..." << std::endl;
     sqlite3_stmt* stmt = prepareStatement(sql);
-    if (!stmt) return false;
+    if (!stmt) {
+        std::cerr << "[ERROR] Failed to prepare statement!" << std::endl;
+        return false;
+    }
     
+    std::cout << "[DEBUG] Binding parameters..." << std::endl;
     sqlite3_bind_text(stmt, 1, wallet.getWalletId().c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt, 2, wallet.getOwnerId().c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_double(stmt, 3, wallet.getBalance());
@@ -428,8 +446,17 @@ bool DatabaseManager::saveWallet(const Wallet& wallet) {
     sqlite3_bind_int64(stmt, 4, now);
     sqlite3_bind_int(stmt, 5, wallet.getIsLocked() ? 1 : 0);
     
+    std::cout << "[DEBUG] Executing statement..." << std::endl;
     bool success = executeStatement(stmt);
+    std::cout << "[DEBUG] Statement execution result: " << (success ? "SUCCESS" : "FAILED") << std::endl;
+    
     finalizeStatement(stmt);
+    
+    if (success) {
+        std::cout << "[DEBUG] Wallet saved successfully to database!" << std::endl;
+    } else {
+        std::cerr << "[ERROR] Failed to save wallet to database!" << std::endl;
+    }
     
     return success;
 }
@@ -670,7 +697,7 @@ std::vector<Transaction> DatabaseManager::loadWalletTransactions(const std::stri
         std::string description = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4));
         TransactionType type = static_cast<TransactionType>(sqlite3_column_int(stmt, 5));
         
-        auto timestamp = std::chrono::system_clock::from_time_t(sqlite3_column_int64(stmt, 6));
+        // auto timestamp = std::chrono::system_clock::from_time_t(sqlite3_column_int64(stmt, 6));  // Unused for now
         
         transactions.emplace_back(transactionId, fromWalletId, toWalletId, amount, 
                                 type, TransactionStatus::COMPLETED, description);
@@ -683,6 +710,9 @@ std::vector<Transaction> DatabaseManager::loadWalletTransactions(const std::stri
 // ==================== BACKUP MANAGEMENT ====================
 
 bool DatabaseManager::createBackup(const std::string& description, BackupType type) {
+    (void)description; // Suppress warning - parameter reserved for future use
+    (void)type;        // Suppress warning - parameter reserved for future use
+    
     std::lock_guard<std::mutex> lock(dbMutex);
     
     if (!db) return false;

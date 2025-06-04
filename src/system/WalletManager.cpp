@@ -56,15 +56,24 @@ bool WalletManager::initialize() {
 
 bool WalletManager::createUserWallet(const std::string& userId, const std::string& walletId) {
     try {
+        std::cout << "[DEBUG] createUserWallet called for userId: " << userId 
+                  << ", walletId: " << walletId << std::endl;
+        
         // Kiểm tra ví đã tồn tại chưa
         if (walletExists(walletId)) {
+            std::cout << "[DEBUG] Wallet already exists, returning false" << std::endl;
             return false;
-        }        // Tạo ví mới với số điểm khởi tạo
+        }
+        
+        std::cout << "[DEBUG] Creating new wallet with " << INITIAL_USER_POINTS << " initial points" << std::endl;
+        // Tạo ví mới với số điểm khởi tạo
         auto wallet = std::shared_ptr<Wallet>(new Wallet(walletId, userId, INITIAL_USER_POINTS));
         // ID is already set in constructor
 
+        std::cout << "[DEBUG] Calling dataManager->saveWallet..." << std::endl;
         // Lưu vào storage
         if (dataManager->saveWallet(wallet)) {
+            std::cout << "[DEBUG] saveWallet returned true, adding to cache..." << std::endl;
             // Thêm vào cache
             walletCache[walletId] = wallet;
             
@@ -80,13 +89,16 @@ bool WalletManager::createUserWallet(const std::string& userId, const std::strin
             );
             wallet->addTransaction(initTransaction);
             
+            std::cout << "[DEBUG] createUserWallet completed successfully!" << std::endl;
             return true;
+        } else {
+            std::cerr << "[ERROR] dataManager->saveWallet returned false!" << std::endl;
         }
         
         return false;
     }
     catch (const std::exception& e) {
-        std::cerr << "Lỗi tạo ví: " << e.what() << std::endl;
+        std::cerr << "[ERROR] Exception in createUserWallet: " << e.what() << std::endl;
         return false;
     }
 }
@@ -373,6 +385,9 @@ std::string WalletManager::getSystemStatistics() {
 
 bool WalletManager::confirmPendingTransaction(const std::string& transactionId,
                                             const std::string& otpCode) {
+    (void)transactionId; // Suppress warning - reserved for future pending transaction feature
+    (void)otpCode;       // Suppress warning - reserved for future OTP verification
+    
     // Tính năng này có thể được mở rộng cho giao dịch đang chờ xử lý
     // Hiện tại hệ thống xử lý giao dịch ngay lập tức
     return false;
@@ -380,6 +395,9 @@ bool WalletManager::confirmPendingTransaction(const std::string& transactionId,
 
 bool WalletManager::cancelPendingTransaction(const std::string& transactionId,
                                            const std::string& reason) {
+    (void)transactionId; // Suppress warning - reserved for future pending transaction feature
+    (void)reason;        // Suppress warning - reserved for future cancellation reason logging
+    
     // Tính năng này có thể được mở rộng cho giao dịch đang chờ xử lý
     return false;
 }
@@ -459,9 +477,9 @@ std::string WalletManager::executeAtomicTransfer(std::shared_ptr<Wallet> fromWal
         // Tạo ID giao dịch
         std::string transactionId = SecurityUtils::generateUUID();
 
-        // Backup số dư trước khi thực hiện
-        double fromBalanceBackup = fromWallet->getBalance();
-        double toBalanceBackup = toWallet->getBalance();
+        // Backup số dư trước khi thực hiện (reserved for rollback functionality)
+        // double fromBalanceBackup = fromWallet->getBalance();
+        // double toBalanceBackup = toWallet->getBalance();
 
         // Thực hiện giao dịch
         bool withdrawSuccess = fromWallet->withdraw(amount);

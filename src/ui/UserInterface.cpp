@@ -711,8 +711,40 @@ void UserInterface::createNewAccount() {
 }
 
 void UserInterface::manageUserAccount() {
-    showInfo("This feature is under development!");
-    pauseScreen();
+    if (!authSystem.isCurrentUserAdmin()) {
+        showError("Access denied! Admin privileges required.");
+        pauseScreen();
+        return;
+    }
+
+    while (true) {
+        clearScreen();
+        showHeader();
+        
+        std::cout << " ╭─────────────────────────────────────────────────────────╮\n";
+        std::cout << " │                 USER ACCOUNT MANAGEMENT                 │\n";
+        std::cout << " ╰─────────────────────────────────────────────────────────╯\n\n";
+        
+        std::cout << " 1. View All Users\n";
+        std::cout << " 2. Search User by Username\n";
+        std::cout << " 3. Create New Account\n";
+        std::cout << " 4. Edit User Information\n";
+        std::cout << " 5. Reset User Password\n";
+        std::cout << " 6. View User Wallet Details\n";
+        std::cout << " 0. Return to Main Menu\n\n";
+        
+        int choice = getIntInput("Choose function: ", 0, 6);
+        
+        switch (choice) {
+            case 1: viewAllUsers(); break;
+            case 2: searchUserByUsername(); break;
+            case 3: createNewUserAccount(); break;
+            case 4: editUserInformation(); break;
+            case 5: resetUserPassword(); break;
+            case 6: viewUserWalletDetails(); break;
+            case 0: return;
+        }
+    }
 }
 
 void UserInterface::viewSystemStatistics() {
@@ -1231,6 +1263,13 @@ std::string UserInterface::formatDateTime(const std::chrono::system_clock::time_
     return oss.str();
 }
 
+std::string UserInterface::formatDate(const std::chrono::system_clock::time_point& timePoint) {
+    auto time_t = std::chrono::system_clock::to_time_t(timePoint);
+    std::ostringstream oss;
+    oss << std::put_time(std::localtime(&time_t), "%d/%m/%Y");
+    return oss.str();
+}
+
 std::string UserInterface::formatFileSize(size_t size) {
     std::ostringstream oss;
     if (size < 1024) {
@@ -1281,4 +1320,285 @@ int UserInterface::showMenuSelection(const std::string& title, const std::vector
     }
     
     return getIntInput("Choose: ", 1, static_cast<int>(options.size()));
+}
+
+void UserInterface::searchUserByUsername() {
+    clearScreen();
+    showHeader();
+    
+    std::cout << " ╭─────────────────────────────────────────────────────────╮\n";
+    std::cout << " │                   SEARCH USER                           │\n";
+    std::cout << " ╰─────────────────────────────────────────────────────────╯\n\n";
+    
+    std::cout << " Enter username to search: ";
+    std::string username;
+    std::getline(std::cin, username);
+    
+    if (username.empty()) {
+        showError("Username cannot be empty!");
+        pauseScreen();
+        return;
+    }
+    
+    auto user = authSystem.findUserByUsername(username);
+    if (!user) {
+        showError("User not found!");
+        pauseScreen();
+        return;
+    }
+    
+    // Display user information
+    std::cout << "\n ╭─────────────────────────────────────────────────────────╮\n";
+    std::cout << " │                   USER INFORMATION                      │\n";
+    std::cout << " ╰─────────────────────────────────────────────────────────╯\n\n";
+    
+    std::cout << " User ID      : " << user->getId() << "\n";
+    std::cout << " Username     : " << user->getUsername() << "\n";
+    std::cout << " Full Name    : " << user->getFullName() << "\n";
+    std::cout << " Email        : " << user->getEmail() << "\n";
+    std::cout << " Phone        : " << user->getPhoneNumber() << "\n";
+    std::cout << " Role         : " << (user->getRole() == UserRole::ADMIN ? "Admin" : "Regular") << "\n";
+    std::cout << " Wallet ID    : " << user->getWalletId() << "\n";
+    std::cout << " Status       : " << (user->isActive() ? "Active" : "Inactive") << "\n";
+    
+    pauseScreen();
+}
+
+void UserInterface::createNewUserAccount() {
+    clearScreen();
+    showHeader();
+    
+    std::cout << " ╭─────────────────────────────────────────────────────────╮\n";
+    std::cout << " │                CREATE NEW ACCOUNT                       │\n";
+    std::cout << " ╰─────────────────────────────────────────────────────────╯\n\n";
+    
+    std::string username, fullName, email, phoneNumber;
+    UserRole role = UserRole::REGULAR;
+    
+    std::cout << " Enter username: ";
+    std::getline(std::cin, username);
+    
+    std::cout << " Enter full name: ";
+    std::getline(std::cin, fullName);
+    
+    std::cout << " Enter email: ";
+    std::getline(std::cin, email);
+    
+    std::cout << " Enter phone number: ";
+    std::getline(std::cin, phoneNumber);
+    
+    std::cout << "\n Select user role:\n";
+    std::cout << " 1. Regular User\n";
+    std::cout << " 2. Admin\n";
+    std::cout << " Choice: ";
+    
+    int roleChoice = getIntInput("Choose: ", 1, 2);
+    if (roleChoice == 2) {
+        role = UserRole::ADMIN;
+    }
+    
+    // Create account with auto-generated password
+    auto result = authSystem.createAccount(username, fullName, email, phoneNumber, role, true);
+    
+    if (result.success) {
+        showSuccess(result.message);
+        if (!result.generatedPassword.empty()) {
+            std::cout << "\n Generated password: " << result.generatedPassword << "\n";
+            std::cout << " Please save this password securely!\n";
+        }
+    } else {
+        showError(result.message);
+    }
+    
+    pauseScreen();
+}
+
+void UserInterface::editUserInformation() {
+    clearScreen();
+    showHeader();
+    
+    std::cout << " ╭─────────────────────────────────────────────────────────╮\n";
+    std::cout << " │                 EDIT USER INFORMATION                   │\n";
+    std::cout << " ╰─────────────────────────────────────────────────────────╯\n\n";
+    
+    std::cout << " Enter username to edit: ";
+    std::string username;
+    std::getline(std::cin, username);
+    
+    auto user = authSystem.findUserByUsername(username);
+    if (!user) {
+        showError("User not found!");
+        pauseScreen();
+        return;
+    }
+    
+    // Show current information
+    std::cout << "\n Current Information:\n";
+    std::cout << " Full Name: " << user->getFullName() << "\n";
+    std::cout << " Email    : " << user->getEmail() << "\n";
+    std::cout << " Phone    : " << user->getPhoneNumber() << "\n\n";
+    
+    std::cout << " What would you like to edit?\n";
+    std::cout << " 1. Full Name\n";
+    std::cout << " 2. Email\n";
+    std::cout << " 3. Phone Number\n";
+    std::cout << " 0. Cancel\n";
+    std::cout << " Choice: ";
+    
+    int choice = getIntInput("Choose: ", 0, 3);
+    
+    switch (choice) {
+        case 1: {
+            std::cout << "\n Enter new full name: ";
+            std::string newName;
+            std::getline(std::cin, newName);
+            if (!newName.empty()) {
+                user->setFullName(newName);
+            }
+            break;
+        }
+        case 2: {
+            std::cout << "\n Enter new email: ";
+            std::string newEmail;
+            std::getline(std::cin, newEmail);
+            if (!newEmail.empty()) {
+                user->setEmail(newEmail);
+            }
+            break;
+        }
+        case 3: {
+            std::cout << "\n Enter new phone number: ";
+            std::string newPhone;
+            std::getline(std::cin, newPhone);
+            if (!newPhone.empty()) {
+                user->setPhoneNumber(newPhone);
+            }
+            break;
+        }
+        case 0:
+            return;
+    }
+    
+    if (choice >= 1 && choice <= 3) {
+        if (authSystem.saveUser(user)) {
+            showSuccess("User information updated successfully!");
+        } else {
+            showError("Failed to update user information!");
+        }
+    }
+    
+    pauseScreen();
+}
+
+void UserInterface::resetUserPassword() {
+    clearScreen();
+    showHeader();
+    
+    std::cout << " ╭─────────────────────────────────────────────────────────╮\n";
+    std::cout << " │                 RESET USER PASSWORD                     │\n";
+    std::cout << " ╰─────────────────────────────────────────────────────────╯\n\n";
+    
+    std::cout << " Enter username to reset password: ";
+    std::string username;
+    std::getline(std::cin, username);
+    
+    auto user = authSystem.findUserByUsername(username);
+    if (!user) {
+        showError("User not found!");
+        pauseScreen();
+        return;
+    }
+    
+    std::cout << "\n Reset password for user: " << user->getFullName() << "\n";
+    std::cout << " 1. Generate random password\n";
+    std::cout << " 2. Set default password (123456789)\n";
+    std::cout << " 0. Cancel\n";
+    std::cout << " Choice: ";
+    
+    int choice = getIntInput("Choose: ", 0, 2);
+    
+    std::string newPassword;
+    switch (choice) {
+        case 1:
+            newPassword = SecurityUtils::generateRandomString(12);
+            break;
+        case 2:
+            newPassword = "123456789";
+            break;
+        case 0:
+            return;
+    }
+    
+    // Hash and set new password
+    user->setPasswordHash(SecurityUtils::hashPassword(newPassword));
+    user->setRequirePasswordChange(true);
+    
+    if (authSystem.saveUser(user)) {
+        showSuccess("Password reset successfully!");
+        std::cout << "\n New password: " << newPassword << "\n";
+        std::cout << " User will be required to change password on next login.\n";
+    } else {
+        showError("Failed to reset password!");
+    }
+    
+    pauseScreen();
+}
+
+void UserInterface::viewUserWalletDetails() {
+    clearScreen();
+    showHeader();
+    
+    std::cout << " ╭─────────────────────────────────────────────────────────╮\n";
+    std::cout << " │                USER WALLET DETAILS                      │\n";
+    std::cout << " ╰─────────────────────────────────────────────────────────╯\n\n";
+    
+    std::cout << " Enter username to view wallet: ";
+    std::string username;
+    std::getline(std::cin, username);
+    
+    auto user = authSystem.findUserByUsername(username);
+    if (!user) {
+        showError("User not found!");
+        pauseScreen();
+        return;
+    }
+    
+    // Get wallet information
+    auto wallet = walletManager->getWalletByUserId(user->getId());
+    if (!wallet) {
+        showError("User's wallet not found!");
+        pauseScreen();
+        return;
+    }
+    
+    std::cout << "\n ╭─────────────────────────────────────────────────────────╮\n";
+    std::cout << " │                   WALLET INFORMATION                    │\n";
+    std::cout << " ╰─────────────────────────────────────────────────────────╯\n\n";
+    
+    std::cout << " User         : " << user->getFullName() << " (" << user->getUsername() << ")\n";
+    std::cout << " Wallet ID    : " << wallet->getId() << "\n";
+    std::cout << " Balance      : " << std::fixed << std::setprecision(2) << wallet->getBalance() << " points\n";
+    std::cout << " Created      : " << formatDateTime(wallet->getCreatedAt()) << "\n";
+    
+    // Show recent transactions
+    auto transactions = wallet->getTransactionHistory();
+    if (!transactions.empty()) {
+        std::cout << "\n Recent Transactions (last 5):\n";
+        std::cout << " ┌──────────┬──────────────┬──────────┬─────────────────────┐\n";
+        std::cout << " │   Date   │     Type     │  Amount  │    Description      │\n";
+        std::cout << " ├──────────┼──────────────┼──────────┼─────────────────────┤\n";
+        
+        int count = 0;
+        for (auto it = transactions.rbegin(); it != transactions.rend() && count < 5; ++it, ++count) {
+            const auto& tx = *it;
+            std::string typeStr = (tx.getType() == TransactionType::TRANSFER) ? "Transfer" : "Other";
+            std::cout << " │ " << std::setw(8) << formatDate(tx.getTimestamp()) 
+                      << " │ " << std::setw(12) << typeStr
+                      << " │ " << std::setw(8) << std::fixed << std::setprecision(2) << tx.getAmount()
+                      << " │ " << std::setw(19) << tx.getDescription().substr(0, 19) << " │\n";
+        }
+        std::cout << " └──────────┴──────────────┴──────────┴─────────────────────┘\n";
+    }
+    
+    pauseScreen();
 }

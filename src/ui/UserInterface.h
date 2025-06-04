@@ -136,6 +136,31 @@ private:
     void viewAllUsers();
 
     /**
+     * @brief Search user by username
+     */
+    void searchUserByUsername();
+
+    /**
+     * @brief Create new user account (admin)
+     */
+    void createNewUserAccount();
+
+    /**
+     * @brief Edit user information
+     */
+    void editUserInformation();
+
+    /**
+     * @brief Reset user password
+     */
+    void resetUserPassword();
+
+    /**
+     * @brief View user wallet details
+     */
+    void viewUserWalletDetails();
+
+    /**
      * @brief Create new account (admin)
      */
     void createNewAccount();
@@ -284,6 +309,13 @@ private:
      * @return Formatted time string
      */
     std::string formatDateTime(const std::chrono::system_clock::time_point& timePoint);
+
+    /**
+     * @brief Format date display (date only)
+     * @param timePoint Time point
+     * @return Formatted date string
+     */
+    std::string formatDate(const std::chrono::system_clock::time_point& timePoint);
 
     /**
      * @brief Format file size display
