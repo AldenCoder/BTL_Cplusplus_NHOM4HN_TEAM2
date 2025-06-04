@@ -37,8 +37,8 @@ bool AuthSystem::initialize() {
             return false;
         }
 
-        // Create default admin if not exists
-        createDefaultAdmin();
+        // Note: No longer auto-creating default admin
+        // Database starts empty - admin must be created manually
         
         isInitialized = true;
         return true;
@@ -76,6 +76,13 @@ RegistrationResult AuthSystem::registerUser(const std::string& username,
         // Generate a unique user ID
         std::string userId = SecurityUtils::generateUUID();
         
+        // Determine user role: if no admin exists, make this user an admin
+        UserRole userRole = UserRole::REGULAR;
+        if (!hasAnyAdmin()) {
+            userRole = UserRole::ADMIN;
+            std::cout << "No admin users found. Creating first admin account..." << std::endl;
+        }
+        
         // Create new user with this ID
         auto user = std::make_shared<User>(
             userId,
@@ -84,7 +91,7 @@ RegistrationResult AuthSystem::registerUser(const std::string& username,
             fullName,
             email,
             phoneNumber,
-            UserRole::REGULAR
+            userRole
         );
 
         // Generate wallet ID
@@ -110,7 +117,11 @@ RegistrationResult AuthSystem::registerUser(const std::string& username,
         }
         
         result.success = true;
-        result.message = "Account registered successfully!";
+        if (userRole == UserRole::ADMIN) {
+            result.message = "First admin account created successfully!";
+        } else {
+            result.message = "Account registered successfully!";
+        }
     }
     catch (const std::exception& e) {
         result.message = "System error: " + std::string(e.what());
@@ -126,8 +137,8 @@ RegistrationResult AuthSystem::createAccount(const std::string& username,
                                            UserRole role,
                                            bool autoGeneratePassword) {
     RegistrationResult result;
-    result.success = false;    // Only admin can create accounts
-    if (!isCurrentUserAdmin()) {
+    result.success = false;    // Only admin can create accounts, unless no admin exists yet
+    if (!isCurrentUserAdmin() && hasAnyAdmin()) {
         result.message = "No permission to create accounts!";
         return result;
     }
@@ -335,6 +346,22 @@ std::string AuthSystem::requestProfileUpdateOTP(const std::string& userId) {
 
 bool AuthSystem::isCurrentUserAdmin() const {
     return currentUser && currentUser->getRole() == UserRole::ADMIN;
+}
+
+bool AuthSystem::hasAnyAdmin() const {
+    try {
+        auto users = dataManager->loadAllUsers();
+        for (const auto& user : users) {
+            if (user->getRole() == UserRole::ADMIN) {
+                return true;
+            }
+        }
+        return false;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Error checking for admin users: " << e.what() << std::endl;
+        return false;
+    }
 }
 
 std::vector<std::shared_ptr<User>> AuthSystem::getAllUsers() {

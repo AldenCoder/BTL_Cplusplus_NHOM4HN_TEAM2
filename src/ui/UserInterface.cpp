@@ -78,13 +78,26 @@ void UserInterface::run() {
 
 void UserInterface::showMainMenu() {
     clearScreen();
-    showHeader();    std::cout << "+--------------------------------------------------+\n";
+    showHeader();
+
+    // Check if system has any admin users
+    bool hasAdmin = authSystem.hasAnyAdmin();
+    
+    std::cout << "+--------------------------------------------------+\n";
     std::cout << "|                   MAIN MENU                      |\n";
     std::cout << "+--------------------------------------------------+\n";
     std::cout << "|  1. Login                                        |\n";
     std::cout << "|  2. Register new account                         |\n";
     std::cout << "|  3. Exit program                                 |\n";
-    std::cout << "+--------------------------------------------------+\n\n";
+    std::cout << "+--------------------------------------------------+\n";
+    
+    if (!hasAdmin) {
+        std::cout << "\n";
+        showInfo("NOTICE: No admin accounts exist.");
+        showInfo("The first registered user will become an administrator.");
+        std::cout << "\n";
+    }
+    std::cout << "\n";
 
     int choice = getIntInput("Choose function: ", 1, 3);
     handleMainMenu(choice);
@@ -232,9 +245,21 @@ void UserInterface::registerScreen() {
     clearScreen();
     showHeader();
     
+    // Check if this will be the first admin
+    bool willBeFirstAdmin = !authSystem.hasAnyAdmin();
+    
     std::cout << "+--------------------------------------------------+\n";
     std::cout << "|                  REGISTER                        |\n";
-    std::cout << "+--------------------------------------------------+\n\n";
+    std::cout << "+--------------------------------------------------+\n";
+    
+    if (willBeFirstAdmin) {
+        std::cout << "\n";
+        showInfo("FIRST ADMIN REGISTRATION");
+        showInfo("This will be the first admin account in the system.");
+        std::cout << "\n";
+    }
+    
+    std::cout << "\n";
 
     std::string username = getInput("Username (3-20 characters): ");
     if (username.empty()) return;

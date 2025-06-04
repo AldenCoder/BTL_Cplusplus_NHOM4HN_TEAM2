@@ -165,7 +165,15 @@ public:
      * @brief Check if current user is admin
      * @return true if admin
      */
-    bool isCurrentUserAdmin() const;    /**
+    bool isCurrentUserAdmin() const;
+
+    /**
+     * @brief Check if there are any admin users in the system
+     * @return true if at least one admin exists
+     */
+    bool hasAnyAdmin() const;
+
+    /**
      * @brief Get list of all users (admin only)
      * @return Vector containing user information
      */
