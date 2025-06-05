@@ -6,7 +6,7 @@
 #include <fstream>
 #include <algorithm>
 #include <chrono>
-#include <ctime>
+#include <ctime> // For localtime_s and localtime_r
 
 #ifdef _WIN32
 #include <direct.h>
@@ -817,12 +817,19 @@ bool DatabaseManager::createBackup(const std::string& description, BackupType ty
     std::lock_guard<std::mutex> lock(dbMutex);
     
     if (!db) return false;
-    
-    // Generate backup filename
+      // Generate backup filename
     auto now = std::chrono::system_clock::now();
-    auto time_t = std::chrono::system_clock::to_time_t(now);
+    auto time_t_val = std::chrono::system_clock::to_time_t(now);
+    
+    std::tm* time_info = std::localtime(&time_t_val);
     std::stringstream ss;
-    ss << backupDirectory << "/backup_" << std::put_time(std::localtime(&time_t), "%Y%m%d_%H%M%S") << ".db";
+    ss << backupDirectory << "/backup_";
+    if (time_info) {
+        ss << std::put_time(time_info, "%Y%m%d_%H%M%S");
+    } else {
+        ss << "backup_" << time_t_val;
+    }
+    ss << ".db";
     std::string backupPath = ss.str();
     
     // Use SQLite backup API

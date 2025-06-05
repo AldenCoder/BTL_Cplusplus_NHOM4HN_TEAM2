@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <sstream>
 #include <regex>
+#include <ctime> // For localtime_s and localtime_r
 #ifdef _WIN32
 #include <conio.h>  // For Windows getch()
 #else
@@ -1282,16 +1283,26 @@ std::string UserInterface::formatCurrency(double amount) {
 }
 
 std::string UserInterface::formatDateTime(const std::chrono::system_clock::time_point& timePoint) {
-    auto time_t = std::chrono::system_clock::to_time_t(timePoint);
+    auto time_t_val = std::chrono::system_clock::to_time_t(timePoint);
+    std::tm* time_info = std::localtime(&time_t_val);
     std::ostringstream oss;
-    oss << std::put_time(std::localtime(&time_t), "%d/%m/%Y %H:%M:%S");
+    if (time_info) {
+        oss << std::put_time(time_info, "%d/%m/%Y %H:%M:%S");
+    } else {
+        oss << "Invalid time";
+    }
     return oss.str();
 }
 
 std::string UserInterface::formatDate(const std::chrono::system_clock::time_point& timePoint) {
-    auto time_t = std::chrono::system_clock::to_time_t(timePoint);
+    auto time_t_val = std::chrono::system_clock::to_time_t(timePoint);
+    std::tm* time_info = std::localtime(&time_t_val);
     std::ostringstream oss;
-    oss << std::put_time(std::localtime(&time_t), "%d/%m/%Y");
+    if (time_info) {
+        oss << std::put_time(time_info, "%d/%m/%Y");
+    } else {
+        oss << "Invalid date";
+    }
     return oss.str();
 }
 
