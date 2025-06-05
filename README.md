@@ -1,467 +1,426 @@
 # Hệ thống Đăng nhập và Quản lý Ví Điểm Thưởng
 
-## Giới thiệu dự án
+Một hệ thống quản lý điểm thưởng an toàn dựa trên SQLite được xây dựng bằng C++, xử lý xác thực người dùng, giao dịch ví và kiểm soát quản trị với tính toàn vẹn dữ liệu tuân thủ ACID.
 
-Dự án **Hệ thống Đăng nhập và Quản lý Ví Điểm Thưởng** là một ứng dụng C++ được phát triển để quản lý tài khoản người dùng và thực hiện các giao dịch chuyển đổi điểm thưởng giữa các ví điện tử.
+## 🌟 Tính năng chính
 
-### Tính năng chính:
-- 🔐 **Hệ thống xác thực an toàn**: Đăng ký, đăng nhập với mật khẩu được băm SHA256
-- 👥 **Quản lý người dùng**: Phân quyền user thường và admin
-- 💰 **Quản lý ví điểm thưởng**: Chuyển điểm, xem lịch sử giao dịch
-- 🔒 **Xác thực 2 lớp**: Sử dụng OTP cho các giao dịch quan trọng
-- 💾 **Lưu trữ dữ liệu**: File-based storage với hệ thống backup tự động
-- 🔑 **Tạo mật khẩu tự động**: Admin có thể tạo tài khoản với mật khẩu tự động
-- 📦 **Hệ thống backup nâng cao**: Backup thủ công/tự động, phục hồi dữ liệu
-- ✅ **Validation nâng cao**: Kiểm tra email và số điện thoại Việt Nam
-- 🎯 **Phát hành điểm từ ví tổng**: Admin có thể cấp điểm cho người dùng
+### 🔐 **Hệ thống Xác thực An toàn**
+- **Mã hóa Mật khẩu SHA256**: Mật khẩu được băm với salt ngẫu nhiên để bảo mật
+- **Kiểm soát Truy cập theo Vai trò**: Người dùng thường và quản trị viên với quyền khác nhau
+- **Người dùng Đầu tiên làm Admin**: Người dùng đăng ký đầu tiên tự động trở thành quản trị viên
+- **Quản lý Phiên**: Đăng nhập/đăng xuất an toàn với theo dõi phiên
+- **Xác minh OTP**: Xác thực hai yếu tố cho các thao tác nhạy cảm
 
-## Thành viên nhóm và phân công công việc
+### 💰 **Quản lý Ví và Giao dịch**
+- **Ví Cá nhân**: Mỗi người dùng có một ví cá nhân với ID duy nhất
+- **Chuyển Điểm**: Chuyển điểm an toàn giữa người dùng với xác minh OTP
+- **Lịch sử Giao dịch**: Dấu vết kiểm toán đầy đủ của tất cả giao dịch
+- **Ví Tổng**: Ví quản trị để phát hành điểm mới cho người dùng
+- **Tuân thủ ACID**: Giao dịch cơ sở dữ liệu đảm bảo tính toàn vẹn dữ liệu
+- **Theo dõi Số dư**: Cập nhật số dư thời gian thực với các thao tác nguyên tử
+
+### 👑 **Tính năng Quản trị**
+- **Quản lý Người dùng**: Tạo, xem và quản lý tài khoản người dùng
+- **Thống kê Hệ thống**: Xem thống kê sử dụng hệ thống toàn diện
+- **Phát hành Điểm**: Phát hành điểm mới từ ví tổng đến ví người dùng
+- **Tạo Tài khoản**: Tạo tài khoản với mật khẩu bảo mật tự động tạo
+- **Sao lưu Cơ sở dữ liệu**: Sao lưu thủ công và tự động với khả năng khôi phục
+
+### 🛡️ **Bảo mật & Tính toàn vẹn Dữ liệu**
+- **Cơ sở dữ liệu SQLite**: Lưu trữ tuân thủ ACID với chế độ WAL cho hiệu suất
+- **Thao tác An toàn Thread**: Các thao tác cơ sở dữ liệu được bảo vệ bằng mutex
+- **Xác thực Dữ liệu**: Xác thực email và số điện thoại Việt Nam
+- **Sao lưu Tự động**: Chức năng sao lưu theo lịch và thủ công
+- **Ràng buộc Khóa ngoại**: Thực thi tính toàn vẹn cơ sở dữ liệu
+
+## 👥 Thành viên nhóm và phân công công việc
 
 | STT | Họ tên | MSSV | Công việc được giao |
 |-----|--------|------|-------------------|
-| 1 | [Tên thành viên 1] | [MSSV] | **System Architecture & Security**: Thiết kế kiến trúc hệ thống, implement SecurityUtils, OTP system |
-| 2 | [Tên thành viên 2] | [MSSV] | **User Management**: Implement User class, AuthSystem, user authentication |
-| 3 | [Tên thành viên 3] | [MSSV] | **Wallet System**: Implement Wallet class, WalletManager, transaction processing |
-| 4 | [Tên thành viên 4] | [MSSV] | **Data Management & UI**: Implement DataManager, UserInterface, backup system |
+| 1 | [Tên thành viên 1] | [MSSV] | **Kiến trúc Hệ thống & Bảo mật**: Thiết kế kiến trúc hệ thống, triển khai SecurityUtils, hệ thống OTP |
+| 2 | [Tên thành viên 2] | [MSSV] | **Quản lý Người dùng**: Triển khai lớp User, AuthSystem, xác thực người dùng |
+| 3 | [Tên thành viên 3] | [MSSV] | **Hệ thống Ví**: Triển khai lớp Wallet, WalletManager, xử lý giao dịch |
+| 4 | [Tên thành viên 4] | [MSSV] | **Quản lý Dữ liệu & Giao diện**: Triển khai DatabaseManager, UserInterface, hệ thống sao lưu |
 
-## Tính năng mới được hoàn thiện (Phiên bản 2.0)
+## ✨ Tính năng nổi bật (Phiên bản hiện tại)
 
-### 🔑 Tạo mật khẩu tự động
-- **Chức năng**: Admin có thể tạo tài khoản cho user với mật khẩu được sinh tự động
+### 🔄 **Khởi tạo Cơ sở dữ liệu Trống**
+- **Thay đổi quan trọng**: Hệ thống bắt đầu với cơ sở dữ liệu hoàn toàn trống
+- **Không tạo admin mặc định**: Không tự động tạo tài khoản admin như trước
+- **Người dùng đầu tiên làm admin**: Người đăng ký đầu tiên sẽ tự động trở thành quản trị viên
+- **Kiểm soát bảo mật**: Đảm bảo kiểm soát thủ công đối với tài khoản admin đầu tiên
+
+### 🗃️ **Chuyển đổi sang Cơ sở dữ liệu SQLite**
+- **Trước đây**: Hệ thống lưu trữ dựa trên file JSON
+- **Hiện tại**: Cơ sở dữ liệu SQLite với tuân thủ ACID
+- **Lợi ích**: Tính toàn vẹn dữ liệu tốt hơn, truy cập đồng thời và hiệu suất
+- **Chuyển đổi tự động**: Tạo schema tự động khi chạy lần đầu
+
+### 🔑 **Tạo Mật khẩu Tự động**
+- **Chức năng**: Admin có thể tạo tài khoản cho người dùng với mật khẩu được sinh tự động
 - **Bảo mật**: Mật khẩu ngẫu nhiên 12 ký tự (chữ cái, số, ký tự đặc biệt)
-- **UI Enhancement**: Hiển thị mật khẩu đã tạo với warning rõ ràng cho admin
-- **Implementation**: Sử dụng `SecurityUtils::generateSecurePassword()`
+- **Cải tiến Giao diện**: Hiển thị mật khẩu đã tạo với cảnh báo rõ ràng cho admin
+- **Triển khai**: Sử dụng `SecurityUtils::generateSecurePassword()`
 
-### 📦 Hệ thống backup nâng cao
-- **Backup thủ công**: Admin có thể tạo backup bất kỳ lúc nào với mô tả tùy chỉnh
-- **Lịch sử backup**: Xem danh sách tất cả backup với thông tin chi tiết (ID, thời gian, kích thước)
-- **Phục hồi dữ liệu**: Chọn từ danh sách backup và phục hồi với safety backup tự động
-- **Dọn dẹp backup**: Tự động xóa backup cũ, chỉ giữ lại số lượng theo cấu hình
-- **Metadata tracking**: Theo dõi loại backup (Manual/Auto/Emergency), checksum, file size
+### 📦 **Hệ thống Sao lưu Nâng cao**
+- **Sao lưu thủ công**: Admin có thể tạo sao lưu bất kỳ lúc nào với mô tả tùy chỉnh
+- **Lịch sử sao lưu**: Xem danh sách tất cả sao lưu với thông tin chi tiết (ID, thời gian, kích thước)
+- **Phục hồi dữ liệu**: Chọn từ danh sách sao lưu và phục hồi với sao lưu an toàn tự động
+- **Dọn dẹp sao lưu**: Tự động xóa sao lưu cũ, chỉ giữ lại số lượng theo cấu hình
+- **Theo dõi Metadata**: Theo dõi loại sao lưu (Manual/Auto/Emergency), checksum, kích thước file
 
-### ✅ Validation nâng cao
-- **Email validation**: Kiểm tra format email theo chuẩn RFC với additional checks
+### 🎯 **Phát hành Điểm từ Ví Tổng**
+- **Tích hợp Ví Tổng**: Kết nối với ví tổng để phát hành điểm
+- **Kiểm soát Admin**: Chỉ admin có quyền phát hành điểm
+- **Theo dõi Giao dịch**: Ghi nhận tất cả giao dịch phát hành với lý do
+- **Quản lý Số dư**: Tự động cập nhật số dư ví người dùng
+
+### ✅ **Xác thực Nâng cao**
+- **Xác thực Email**: Kiểm tra định dạng email theo chuẩn RFC với kiểm tra bổ sung
   - Không cho phép dấu chấm liên tiếp (..)
   - Không cho phép dấu chấm ở đầu/cuối
-  - Validate độ dài email tối đa 254 ký tự
-- **Phone validation**: Hỗ trợ số điện thoại Việt Nam
-  - Format: 84xxxxxxxxx, 0xxxxxxxxx, hoặc 10-11 chữ số
+  - Xác thực độ dài email tối đa 254 ký tự
+- **Xác thực Số điện thoại**: Hỗ trợ số điện thoại Việt Nam
+  - Định dạng: 84xxxxxxxxx, 0xxxxxxxxx, hoặc 10-11 chữ số
   - Tự động loại bỏ ký tự phân cách (space, dash, brackets)
   - Kiểm tra pattern phù hợp với tiêu chuẩn VN
 
-### 🎯 Phát hành điểm từ ví tổng
-- **Master Wallet Integration**: Kết nối với ví tổng để phát hành điểm
-- **Admin Controls**: Chỉ admin có quyền phát hành điểm
-- **Transaction Tracking**: Ghi nhận tất cả giao dịch phát hành với lý do
-- **Balance Management**: Tự động cập nhật số dư ví người dùng
+### 🔧 **Cải thiện Giao diện/Trải nghiệm Người dùng**
+- **Hệ thống Cảnh báo**: Thêm phương thức `showWarning()` cho các cảnh báo quan trọng
+- **Hiển thị Được định dạng**: Hiển thị kích thước file, datetime theo định dạng dễ đọc
+- **Cải tiến Menu**: Quản lý sao lưu với submenu đầy đủ chức năng
+- **Xử lý Lỗi**: Xử lý lỗi tốt hơn với try-catch và thông báo rõ ràng
 
-### 🔧 Cải thiện UI/UX
-- **Warning System**: Thêm `showWarning()` method cho các cảnh báo quan trọng
-- **Formatted Display**: Hiển thị file size, datetime theo định dạng dễ đọc
-- **Menu Enhancement**: Backup management với submenu đầy đủ chức năng
-- **Error Handling**: Xử lý lỗi tốt hơn với try-catch và thông báo rõ ràng
+## 🚀 Hướng dẫn Cài đặt
 
-## Đặc tả chức năng
+### Yêu cầu Tiên quyết
 
-### A. Quản lý tài khoản người dùng
-
-#### 1. Đăng ký tài khoản
-- **Input**: Username, mật khẩu, họ tên, email, số điện thoại
-- **Process**: 
-  - Validate thông tin đầu vào
-  - Kiểm tra username trùng lặp
-  - Băm mật khẩu bằng SHA256 + salt
-  - Tạo ví điểm thưởng tự động
-- **Output**: Thông báo thành công/thất bại
-
-#### 2. Đăng nhập
-- **Input**: Username, mật khẩu
-- **Process**: 
-  - Tìm user trong database
-  - Verify mật khẩu
-  - Tạo session
-- **Output**: Chuyển đến menu tương ứng với quyền user
-
-#### 3. Quản lý thông tin cá nhân
-- **Chức năng**: Xem, cập nhật thông tin (tên, email, SĐT)
-- **Bảo mật**: Yêu cầu OTP khi thay đổi thông tin quan trọng
-
-### B. Hệ thống phân quyền
-
-#### 1. User thường
-- Quản lý thông tin cá nhân
-- Xem số dư ví
-- Chuyển điểm cho user khác
-- Xem lịch sử giao dịch
-
-#### 2. Admin
-- Tất cả chức năng của user thường
-- Tạo tài khoản cho user khác
-- Xem danh sách tất cả user
-- Phát hành điểm từ ví tổng
-- Quản lý backup dữ liệu
-
-### C. Quản lý ví điểm thưởng
-
-#### 1. Cấu trúc ví
-```cpp
-class Wallet {
-    string walletId;        // ID duy nhất
-    string ownerId;         // ID chủ sở hữu  
-    double balance;         // Số dư hiện tại
-    vector<Transaction> transactions; // Lịch sử giao dịch
-};
-```
-
-#### 2. Giao dịch chuyển điểm
-- **Quy trình ACID**: Đảm bảo tính toàn vẹn dữ liệu
-- **Xác thực OTP**: Bắt buộc cho mọi giao dịch
-- **Rollback**: Tự động khôi phục khi có lỗi
-
-#### 3. Ví tổng (Master Wallet)
-- Nguồn phát sinh điểm duy nhất trong hệ thống
-- Chỉ admin có quyền phát hành điểm
-
-### D. Hệ thống bảo mật
-
-#### 1. Mã hóa mật khẩu
-- **Thuật toán**: SHA256 với salt ngẫu nhiên
-- **Format lưu trữ**: `salt$hash`
-
-#### 2. OTP (One-Time Password)
-- **Độ dài**: 6 chữ số
-- **Thời gian hiệu lực**: 5 phút
-- **Mục đích**: 
-  - Xác thực giao dịch chuyển điểm
-  - Xác thực thay đổi thông tin cá nhân
-
-#### 3. Session Management
-- Quản lý phiên đăng nhập
-- Tự động đăng xuất khi không hoạt động
-
-## Cài đặt và chạy chương trình
-
-### Yêu cầu hệ thống
-- **OS**: Linux/Unix, Windows (với MinGW), macOS
-- **Compiler**: g++ hỗ trợ C++17 trở lên
-- **Libraries**: OpenSSL (cho SHA256 hashing)
-
-### Cài đặt dependencies
-
-#### Windows (recommended):
-```powershell
-# Project đã được setup sẵn với build.ps1 script
-# Không cần cài đặt thêm dependencies
-```
-
-#### Ubuntu/Debian:
+#### **Windows**
 ```bash
-sudo apt-get update
-sudo apt-get install build-essential libssl-dev
-```
-
-#### macOS:
-```bash
-brew install openssl
-```
-
-### Biên dịch và chạy chương trình
-
-#### Windows (PowerShell):
-```powershell
-# Di chuyển vào thư mục project
-cd f:\project\team2C
-
-# Biên dịch sử dụng script có sẵn
+cài sqlite
 .\build.ps1
-
-# Chạy chương trình
-.\wallet_system.exe
+.\bin\wallet_system.exe
 ```
 
-#### Linux/macOS (Makefile):
+#### **macOS**
 ```bash
-# Tạo thư mục cần thiết
-make setup-dirs
+# Cài đặt Homebrew nếu chưa có
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-# Biên dịch
-make all
+# Cài đặt dependencies cần thiết
+brew install sqlite3
+brew install pkg-config
 
-# Chạy
-./wallet_system
+# Cài đặt Xcode Command Line Tools
+xcode-select --install
 ```
 
-#### Biên dịch thủ công:
+#### **Linux (Ubuntu/Debian)**
 ```bash
-g++ -std=c++17 -Wall -Wextra -O2 -Isrc \
-    src/**/*.cpp src/*.cpp \
-    -lssl -lcrypto -o wallet_system
+# Cập nhật danh sách package
+sudo apt update
+
+# Cài đặt dependencies cần thiết
+sudo apt install g++ sqlite3 libsqlite3-dev pkg-config make cmake
+
+# Cho các distro khác:
+# CentOS/RHEL: sudo yum install gcc-c++ sqlite-devel pkgconfig make cmake
+# Arch Linux: sudo pacman -S gcc sqlite pkg-config make cmake
 ```
 
-### Chạy chương trình
-```bash
-# Nếu dùng Makefile
-make run
+### 📥 Cài đặt & Biên dịch
 
-# Hoặc chạy trực tiếp
+#### **Lựa chọn 1: Sử dụng Makefile (Khuyến nghị)**
+```bash
+# Clone repository
+git clone <repository-url>
+cd team2C
+
+# Biên dịch dự án
+make
+
+# Chạy ứng dụng
 ./bin/wallet_system
-
-# Windows
-.\build.ps1
-.\wallet_system.exe
-
-# Mac
-chmod +x build.sh
-.\build.sh (đổi đuôi .sh)
-.\wallet_system
 ```
 
-## Hướng dẫn sử dụng
-
-### 1. Khởi động ứng dụng
-```
-=================================================
-    HỆ THỐNG ĐĂNG NHẬP VÀ QUẢN LÝ VÍ ĐIỂM THƯỞNG  
-=================================================
-
-MENU CHÍNH:
-1. Đăng nhập
-2. Đăng ký tài khoản mới  
-3. Thoát
-
-Chọn chức năng (1-3): 
-```
-
-### 2. Đăng ký tài khoản mới
-- Nhập username (duy nhất, không thay đổi được)
-- Nhập mật khẩu (tối thiểu 8 ký tự)
-- Nhập thông tin cá nhân (họ tên, email, SĐT)
-
-### 3. Đăng nhập
-- Nhập username và mật khẩu
-- Nếu là lần đăng nhập đầu tiên với mật khẩu tự sinh → bắt buộc đổi mật khẩu
-
-### 4. Chức năng chính
-
-#### User thường:
-```
-MENU NGƯỜI DÙNG:
-1. Xem thông tin cá nhân
-2. Thay đổi mật khẩu  
-3. Cập nhật thông tin cá nhân
-4. Xem số dư ví
-5. Chuyển điểm
-6. Xem lịch sử giao dịch
-7. Đăng xuất
-```
-
-#### Admin:
-```
-MENU QUẢN TRỊ:
-1. Quản lý thông tin cá nhân
-2. Xem danh sách người dùng
-3. Tạo tài khoản mới (với tùy chọn tạo mật khẩu tự động)
-4. Phát hành điểm từ ví tổng
-5. Xem thống kê hệ thống
-6. Quản lý backup
-   - Tạo backup thủ công
-   - Xem lịch sử backup
-   - Phục hồi từ backup
-   - Dọn dẹp backup cũ
-   - Quay lại menu chính
-7. Đăng xuất
-```
-
-### 5. Quy trình tạo tài khoản mới (Admin)
-1. Chọn "Tạo tài khoản mới" từ menu admin
-2. Nhập thông tin user (username, tên, email, SĐT, role)
-3. Chọn có tự động tạo mật khẩu hay không
-4. Nếu chọn tự động: hệ thống sinh mật khẩu 12 ký tự ngẫu nhiên
-5. Hiển thị mật khẩu đã tạo với cảnh báo bảo mật
-6. Admin chịu trách nhiệm chuyển mật khẩu cho user một cách an toàn
-
-### 6. Quy trình phát hành điểm (Admin)
-1. Chọn "Phát hành điểm từ ví tổng"
-2. Nhập username người nhận
-3. Nhập số điểm muốn phát hành
-4. Nhập lý do phát hành điểm
-5. Xác nhận giao dịch
-6. Hệ thống cập nhật số dư ví người dùng
-
-### 7. Quy trình chuyển điểm
-1. Chọn "Chuyển điểm" từ menu
-2. Nhập ID ví đích
-3. Nhập số điểm muốn chuyển
-4. Nhập mô tả giao dịch (tùy chọn)
-5. Hệ thống tạo và hiển thị mã OTP
-6. Nhập mã OTP để xác nhận
-7. Giao dịch được thực hiện
-
-## Cấu trúc dữ liệu
-
-### Lưu trữ User (JSON):
-```json
-{
-  "userId": "uuid-string",
-  "username": "user123", 
-  "passwordHash": "salt$hash",
-  "fullName": "Nguyễn Văn A",
-  "email": "user@example.com",
-  "phoneNumber": "0123456789",
-  "role": 0,
-  "isPasswordGenerated": false,
-  "isFirstLogin": false,
-  "walletId": "W_12345678",
-  "createdAt": 1640995200,
-  "lastLogin": 1640995200
-}
-```
-
-### Lưu trữ Wallet (JSON):
-```json
-{
-  "walletId": "W_12345678",
-  "ownerId": "uuid-string",
-  "balance": 1000.0,
-  "transactions": [...],
-  "createdAt": 1640995200,
-  "isLocked": false
-}
-```
-
-### Cấu trúc thư mục:
-```
-project/
-├── src/                    # Source code
-│   ├── models/            # Data models (User, Wallet)
-│   ├── security/          # Security utilities (Hash, OTP)
-│   ├── storage/           # Data management
-│   ├── system/            # Core systems (Auth, WalletManager)
-│   ├── ui/               # User interface
-│   └── main.cpp          # Entry point
-├── data/                  # User data storage
-├── backup/               # Backup files  
-├── logs/                 # Log files
-├── Makefile              # Build configuration
-├── CMakeLists.txt        # CMake configuration
-└── README.md             # Documentation
-```
-
-## Hệ thống Backup và Recovery (Nâng cấp)
-
-### Backup tự động:
-- Backup hàng ngày vào lúc khởi động ứng dụng
-- Backup emergency trước khi restore
-- Giữ tối đa số lượng backup theo cấu hình (mặc định 10)
-- Checksum để kiểm tra tính toàn vẹn dữ liệu
-- Metadata tracking (loại backup, kích thước, thời gian)
-
-### Backup thủ công (Admin):
-```
-1. Vào Menu Admin > Quản lý backup > Tạo backup thủ công
-2. Nhập mô tả cho backup (tùy chọn)
-3. Hệ thống tạo backup với thông tin chi tiết:
-   - Backup ID: unique identifier
-   - Filename: backup_YYYYMMDD_HHMMSS.zip
-   - Size: kích thước file được format
-   - Created: thời gian tạo
-```
-
-### Xem lịch sử backup:
-```
-Hiển thị table với thông tin:
-- Backup ID (18 ký tự đầu)
-- Filename (23 ký tự đầu)  
-- Size (formatted: B, KB, MB, GB)
-- Created (DD/MM/YYYY HH:MM:SS)
-- Type (Manual/Auto/Emergency)
-```
-
-### Phục hồi dữ liệu:
-```
-1. Chọn "Phục hồi từ backup" từ menu
-2. Hệ thống hiển thị danh sách backup (tối đa 10 gần nhất)
-3. Chọn backup muốn restore với thông tin chi tiết
-4. Hệ thống cảnh báo và tạo safety backup trước khi restore
-5. Xác nhận để thực hiện restore
-6. Thông báo kết quả và yêu cầu restart ứng dụng
-```
-
-### Dọn dẹp backup:
-```
-1. Chọn "Dọn dẹp backup cũ"
-2. Nhập số lượng backup muốn giữ lại (1-20)
-3. Hệ thống hiển thị thống kê:
-   - Tổng số backup hiện tại
-   - Số backup sẽ được giữ lại
-   - Số backup sẽ bị xóa
-4. Xác nhận để thực hiện cleanup
-5. Báo cáo kết quả cleanup
-```
-
-### Backup thủ công qua file system:
+#### **Lựa chọn 2: Sử dụng CMake**
 ```bash
-# Từ menu admin chọn "Quản lý backup"
-# Hoặc copy thư mục data/
-cp -r data/ backup/manual_backup_$(date +%Y%m%d)
+# Clone repository
+git clone <repository-url>
+cd team2C
+
+# Tạo thư mục build
+mkdir build && cd build
+
+# Cấu hình và biên dịch
+cmake ..
+make
+
+# Chạy ứng dụng
+./WalletSystem
 ```
 
-## Cải thiện Validation và Security
+## 🎯 Hướng dẫn Sử dụng
 
-### Email Validation nâng cao:
-```cpp
-// Kiểm tra format email theo RFC standard
-// Additional checks:
-- Không cho phép dấu chấm liên tiếp (..)
-- Không cho phép dấu chấm ở đầu/cuối  
-- Validate độ dài email tối đa 254 ký tự
-- Kiểm tra @ không ở đầu/cuối email
+### **Thiết lập Lần đầu**
+
+1. **Khởi chạy Ứng dụng**
+   ```bash
+   ./bin/wallet_system
+   ```
+
+2. **Tạo Tài khoản Quản trị viên Đầu tiên**
+   - Hệ thống bắt đầu với cơ sở dữ liệu trống
+   - Người dùng đăng ký đầu tiên tự động trở thành quản trị viên
+   - Chọn tên người dùng và mật khẩu mạnh để bảo mật
+
+3. **Cấu hình Hệ thống Ban đầu**
+   - Đăng nhập với tài khoản admin của bạn
+   - Thiết lập các tài khoản người dùng bổ sung nếu cần
+   - Cấu hình thiết lập sao lưu
+
+### **Thao tác Người dùng**
+
+#### **Đăng ký & Đăng nhập**
+- Người dùng mới có thể đăng ký với tên người dùng, mật khẩu, họ tên, email và số điện thoại
+- Đăng nhập bằng tên người dùng và mật khẩu
+- Người dùng đầu tiên tự động trở thành admin
+
+#### **Quản lý Ví**
+- Xem số dư hiện tại và lịch sử giao dịch
+- Chuyển điểm cho người dùng khác (yêu cầu xác minh OTP)
+- Xem báo cáo giao dịch chi tiết
+
+#### **Quản lý Hồ sơ**
+- Cập nhật thông tin cá nhân (yêu cầu xác minh OTP)
+- Đổi mật khẩu với xác minh mật khẩu cũ
+
+### **Thao tác Quản trị**
+
+#### **Quản lý Người dùng**
+- Xem tất cả người dùng đã đăng ký
+- Tạo tài khoản người dùng mới với mật khẩu tự động tạo
+- Tìm kiếm người dùng theo tên người dùng
+- Quản lý vai trò và quyền người dùng
+
+#### **Quản trị Hệ thống**
+- Phát hành điểm từ ví tổng đến ví người dùng
+- Xem thống kê hệ thống toàn diện
+- Tạo và khôi phục sao lưu cơ sở dữ liệu
+- Giám sát hoạt động giao dịch
+
+## 🏗️ Kiến trúc Hệ thống
+
+### **Các Thành phần Hệ thống**
+
+```
+├── Hệ thống Xác thực (AuthSystem)
+│   ├── Đăng ký và đăng nhập người dùng
+│   ├── Quản lý phiên
+│   ├── Bảo mật mật khẩu
+│   └── Kiểm soát truy cập theo vai trò
+│
+├── Quản lý Ví (WalletManager)
+│   ├── Tạo và quản lý ví
+│   ├── Thao tác chuyển điểm
+│   ├── Xử lý giao dịch
+│   └── Thao tác ví tổng
+│
+├── Lớp Cơ sở dữ liệu (DatabaseManager)
+│   ├── Thao tác cơ sở dữ liệu SQLite
+│   ├── Quản lý giao dịch ACID
+│   ├── Sao lưu và khôi phục dữ liệu
+│   └── Truy cập dữ liệu an toàn thread
+│
+├── Lớp Bảo mật (SecurityUtils, OTPManager)
+│   ├── Băm mật khẩu (SHA256 + salt)
+│   ├── Tạo và xác minh OTP
+│   ├── Xác thực đầu vào
+│   └── Tạo ngẫu nhiên an toàn
+│
+└── Giao diện Người dùng (UserInterface)
+    ├── Tương tác dựa trên console
+    ├── Điều hướng menu
+    ├── Xử lý đầu vào
+    └── Định dạng hiển thị
 ```
 
-### Phone Number Validation (Vietnamese):
-```cpp
-// Hỗ trợ các format số điện thoại Việt Nam:
-- 84xxxxxxxxx  (country code +84)
-- 0xxxxxxxxx   (bắt đầu bằng 0)
-- xxxxxxxxxx   (10-11 chữ số)
+### **Schema Cơ sở dữ liệu**
 
-// Auto cleanup:
-- Loại bỏ space, dash, brackets, plus
-- Chỉ chấp nhận digits sau khi cleanup
+#### **Bảng Users**
+```sql
+CREATE TABLE users (
+    user_id TEXT PRIMARY KEY,
+    username TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    full_name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    phone_number TEXT NOT NULL,
+    role INTEGER NOT NULL,
+    is_password_generated INTEGER DEFAULT 0,
+    is_first_login INTEGER DEFAULT 1,
+    wallet_id TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    last_login INTEGER
+);
 ```
 
-### Password Security:
-```cpp
-// Auto-generated password:
-- Độ dài: 12 ký tự
-- Bao gồm: chữ hoa, chữ thường, số, ký tự đặc biệt
-- Random generation với entropy cao
-- Hiển thị một lần duy nhất cho admin
+#### **Bảng Wallets**
+```sql
+CREATE TABLE wallets (
+    wallet_id TEXT PRIMARY KEY,
+    owner_id TEXT NOT NULL,
+    balance REAL NOT NULL DEFAULT 0.0,
+    created_at INTEGER NOT NULL,
+    is_locked INTEGER DEFAULT 0,
+    FOREIGN KEY (owner_id) REFERENCES users (user_id)
+);
 ```
 
-## Tài liệu tham khảo
+#### **Bảng Transactions**
+```sql
+CREATE TABLE transactions (
+    transaction_id TEXT PRIMARY KEY,
+    from_wallet_id TEXT,
+    to_wallet_id TEXT,
+    amount REAL NOT NULL,
+    description TEXT,
+    transaction_type INTEGER NOT NULL,
+    timestamp INTEGER NOT NULL,
+    FOREIGN KEY (from_wallet_id) REFERENCES wallets (wallet_id),
+    FOREIGN KEY (to_wallet_id) REFERENCES wallets (wallet_id)
+);
+```
 
-1. **CPP_OTP**: [https://github.com/patzol768/cpp-otp](https://github.com/patzol768/cpp-otp) - Thư viện OTP cho C++
-2. **COTP**: [https://github.com/tilkinsc/COTP](https://github.com/tilkinsc/COTP) - Thư viện OTP khác
-3. **ACID Properties**: [https://200lab.io/blog/acid-la-gi/](https://200lab.io/blog/acid-la-gi/) - Tính chất ACID trong database
+## 🔒 Tính năng Bảo mật
+
+### **Bảo mật Mật khẩu**
+- **Thuật toán Băm**: SHA256 với salt ngẫu nhiên
+- **Định dạng Lưu trữ**: `salt$hash` để lưu trữ an toàn
+- **Mật khẩu Tự động Tạo**: Mật khẩu an toàn 12 ký tự cho tài khoản do admin tạo
+
+### **Bảo mật Giao dịch**
+- **Xác minh OTP**: OTP 6 chữ số yêu cầu cho chuyển điểm
+- **Giao dịch ACID**: Giao dịch cơ sở dữ liệu đảm bảo tính nhất quán
+- **Thao tác Nguyên tử**: Xử lý giao dịch all-or-nothing
+- **Dấu vết Kiểm toán**: Lịch sử giao dịch hoàn chỉnh với timestamps
+
+### **Bảo vệ Dữ liệu**
+- **Chế độ SQLite WAL**: Write-Ahead Logging cho tính toàn vẹn dữ liệu
+- **Ràng buộc Khóa ngoại**: Tính toàn vẹn tham chiếu cơ sở dữ liệu
+- **Thao tác Thread-Safe**: Truy cập cơ sở dữ liệu được bảo vệ bằng mutex
+- **Sao lưu Tự động**: Sao lưu dữ liệu thường xuyên cho khôi phục thảm họa
+
+## 🔧 Cấu hình
+
+### **Lưu trữ Dữ liệu**
+- **File Cơ sở dữ liệu**: `data/wallet_system.db`
+- **Thư mục Sao lưu**: `data/backup/`
+- **File Log**: `logs/` (nếu logging được bật)
+
+### **Thiết lập Mặc định**
+- **Điểm Ban đầu của Người dùng**: 100 điểm cho người dùng mới
+- **Thời hạn OTP**: 5 phút
+- **Độ dài OTP**: 6 chữ số
+- **Số lượng Sao lưu Tối đa**: 10 sao lưu
+- **Khoảng thời gian Sao lưu Tự động**: 24 giờ
+
+## 🎯 Thay đổi Chính từ Phiên bản Trước
+
+### **🔄 Khởi tạo Cơ sở dữ liệu Trống**
+- **Trước**: Hệ thống tự động tạo tài khoản admin mặc định
+- **Hiện tại**: Cơ sở dữ liệu bắt đầu hoàn toàn trống
+- **Người dùng Đầu tiên**: Tự động trở thành quản trị viên
+- **Bảo mật**: Đảm bảo kiểm soát thủ công đối với tài khoản admin ban đầu
+
+### **🗃️ Chuyển đổi Cơ sở dữ liệu SQLite**
+- **Trước**: Hệ thống lưu trữ dựa trên file JSON
+- **Hiện tại**: Cơ sở dữ liệu SQLite với tuân thủ ACID
+- **Lợi ích**: Tính toàn vẹn dữ liệu tốt hơn, truy cập đồng thời và hiệu suất
+- **Chuyển đổi**: Tạo schema tự động khi chạy lần đầu
+
+### **⚡ Hiệu suất Nâng cao**
+- **Lập chỉ mục Cơ sở dữ liệu**: Truy vấn được tối ưu hóa với chỉ mục phù hợp
+- **Chế độ WAL**: Write-Ahead Logging cho hiệu suất đồng thời tốt hơn
+- **Tập hợp Kết nối**: Quản lý kết nối cơ sở dữ liệu hiệu quả
+- **Sử dụng Bộ nhớ**: Sử dụng bộ nhớ được tối ưu hóa với smart pointers
+
+## 🐛 Khắc phục Sự cố
+
+### **Các Vấn đề Thường gặp**
+
+#### **Lỗi Biên dịch**
+```bash
+# Không tìm thấy SQLite3
+sudo apt install libsqlite3-dev  # Ubuntu/Debian
+brew install sqlite3             # macOS
+# Windows: Tải SQLite3 development libraries
+
+# Lỗi compiler
+# Đảm bảo hỗ trợ C++17 (GCC 7+ hoặc Clang 5+)
+g++ --version
+```
+
+#### **Lỗi Runtime**
+```bash
+# Lỗi quyền cơ sở dữ liệu
+chmod 755 data/
+chmod 644 data/wallet_system.db
+
+# Thiếu dependencies
+ldd ./bin/wallet_system  # Linux
+otool -L ./bin/wallet_system  # macOS
+```
+
+#### **Vấn đề Cơ sở dữ liệu**
+```bash
+# Kiểm tra tính toàn vẹn cơ sở dữ liệu
+sqlite3 data/wallet_system.db "PRAGMA integrity_check;"
+
+# Reset cơ sở dữ liệu (CẢNH BÁO: Điều này xóa tất cả dữ liệu)
+rm data/wallet_system.db
+# Khởi động lại ứng dụng để tạo lại cơ sở dữ liệu
+```
+
+### **Tối ưu hóa Hiệu suất**
+```bash
+# Bật chế độ WAL cho hiệu suất tốt hơn
+sqlite3 data/wallet_system.db "PRAGMA journal_mode=WAL;"
+
+# Phân tích hiệu suất cơ sở dữ liệu
+sqlite3 data/wallet_system.db "ANALYZE;"
+```
+
+## 🔄 Sao lưu & Khôi phục
+
+### **Sao lưu Tự động**
+- **Được lên lịch**: Sao lưu tự động hàng ngày
+- **Được kích hoạt**: Sao lưu trước các thao tác quan trọng
+- **Lưu giữ**: Chính sách lưu giữ sao lưu có thể cấu hình
+
+### **Sao lưu Thủ công**
+```bash
+# Tạo sao lưu thủ công
+# Truy cập qua menu admin -> Quản lý Sao lưu -> Tạo Sao lưu Thủ công
+
+# File sao lưu được lưu trữ trong: data/backup/
+# Định dạng: backup_YYYYMMDD_HHMMSS.db
+```
+
+### **Quy trình Khôi phục**
+1. Truy cập menu admin
+2. Chọn "Quản lý Sao lưu"
+3. Chọn "Khôi phục từ Sao lưu"
+4. Chọn file sao lưu từ danh sách
+5. Xác nhận khôi phục (tạo sao lưu an toàn trước)
+
+## 📚 Tài liệu Tham khảo
+
+1. **CPP OTP**: [https://github.com/patzol768/cpp-otp](https://github.com/patzol768/cpp-otp) - Thư viện OTP cho C++
+2. **COTP**: [https://github.com/tilkinsc/COTP](https://github.com/tilkinsc/COTP) - Thư viện OTP alternative
+3. **ACID Properties**: [https://200lab.io/blog/acid-la-gi/](https://200lab.io/blog/acid-la-gi/) - Tính chất ACID trong cơ sở dữ liệu
 4. **OpenSSL Documentation**: [https://www.openssl.org/docs/](https://www.openssl.org/docs/) - Tài liệu OpenSSL
 5. **C++17 Reference**: [https://en.cppreference.com/w/cpp/17](https://en.cppreference.com/w/cpp/17) - Tài liệu C++17
+6. **SQLite Documentation**: [https://www.sqlite.org/docs.html](https://www.sqlite.org/docs.html) - Tài liệu SQLite
 
-## Thông tin thêm
-
-### Update Log (v2.0 - 29/05/2025):
-- ✅ **Hoàn thiện tính năng tạo mật khẩu tự động** cho admin
-- ✅ **Nâng cấp hệ thống backup** với UI đầy đủ và kết nối DataManager
-- ✅ **Cải thiện validation** email và phone number cho người dùng Việt Nam  
-- ✅ **Implement phát hành điểm từ ví tổng** với UI và xử lý giao dịch
-- ✅ **Thêm showWarning() method** và các utility functions
-- ✅ **Enhanced UI/UX** với formatted display và error handling
-- ✅ **Cập nhật README.md** với tài liệu đầy đủ cho tất cả tính năng mới
-- ✅ **Testing và compilation** thành công trên Windows
-
-### Liên hệ hỗ trợ:
-- Email nhóm: 
-- Repository: [https://github.com/team2c/wallet-system](https://github.com/team2c/wallet-system)
-
-### License:
-MIT License - Xem file LICENSE để biết thêm chi tiết.
+**Nhóm 2 C++** - Hệ thống Quản lý Ví Điểm Thưởng © 2025

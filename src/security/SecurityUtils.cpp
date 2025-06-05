@@ -1,9 +1,3 @@
-/**
- * @file SecurityUtils.cpp
- * @brief Implementation of security utilities
- * @author Team 2C
- */
-
 #include "SecurityUtils.h"
 #include <sstream>
 #include <iomanip>

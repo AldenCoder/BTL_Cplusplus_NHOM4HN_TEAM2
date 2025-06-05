@@ -1,9 +1,3 @@
-/**
- * @file OTPManager.h
- * @brief Header file cho OTPManager class
- * @author Team 2C
- */
-
 #ifndef OTPMANAGER_H
 #define OTPMANAGER_H
 
@@ -27,7 +21,7 @@ enum class OTPType {
  */
 class OTPManager {
 private:
-    SecurityUtils* securityUtils;
+    // SecurityUtils* securityUtils;  // Commented out until needed
 
 public:
     /**

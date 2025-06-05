@@ -1,9 +1,3 @@
-/**
- * @file Wallet.cpp
- * @brief Implementation of Wallet class and related components
- * @author Team 2C
- */
-
 #include <iostream>
 #include "Wallet.h"
 #include "../security/SecurityUtils.h"
@@ -51,6 +45,7 @@ std::string Transaction::toJson() const {
 }
 
 Transaction Transaction::fromJson(const std::string& json) {
+    (void)json; // Suppress unused parameter warning
     // This is a simple implementation, in practice should use JSON library
     // Temporarily create empty transaction
     Transaction t("", "", 0.0, TransactionType::TRANSFER_OUT);

@@ -1,25 +1,15 @@
-/**
- * @file WalletManager.h
- * @brief Quản lý ví điểm thưởng và giao dịch
- * @author Team 2C
- */
-
 #ifndef WALLET_MANAGER_H
 #define WALLET_MANAGER_H
 
 #include "../models/Wallet.h"
 #include "../security/SecurityUtils.h"
 #include "../security/OTPManager.h"
-#include "../storage/DataManager.h"
+#include "../storage/DatabaseManager.h"
 #include <memory>
 #include <unordered_map>
 #include <vector>
-#include <mutex>
+#include "../thread_compat.h"
 
-/**
- * @struct TransferRequest
- * @brief Yêu cầu chuyển điểm
- */
 struct TransferRequest {
     std::string fromWalletId;   // ID ví gửi
     std::string toWalletId;     // ID ví nhận
@@ -52,22 +42,22 @@ struct TransferResult {
  */
 class WalletManager {
 private:
-    std::shared_ptr<DataManager> dataManager;    // Quản lý dữ liệu
-    std::shared_ptr<OTPManager> otpManager;      // Quản lý OTP
-    std::unique_ptr<MasterWallet> masterWallet;  // Ví tổng
+    std::shared_ptr<DatabaseManager> dataManager;    // Database manager
+    std::shared_ptr<OTPManager> otpManager;           // Quản lý OTP
+    std::unique_ptr<MasterWallet> masterWallet;       // Ví tổng
     
     std::unordered_map<std::string, std::shared_ptr<Wallet>> walletCache; // Cache ví
-    // std::mutex transferMutex;                    // Mutex cho giao dịch thread-safe - temporarily disabled for MinGW compatibility
+    // std::mutex transferMutex;                     // Mutex cho giao dịch thread-safe - temporarily disabled for MinGW compatibility
     
-    static const double INITIAL_USER_POINTS;     // Điểm khởi tạo cho user mới
+    static const double INITIAL_USER_POINTS;          // Điểm khởi tạo cho user mới
 
 public:
     /**
      * @brief Constructor
-     * @param dataManager Quản lý dữ liệu
+     * @param dataManager Database manager
      * @param otpManager Quản lý OTP
      */
-    WalletManager(std::shared_ptr<DataManager> dataManager, 
+    WalletManager(std::shared_ptr<DatabaseManager> dataManager, 
                   std::shared_ptr<OTPManager> otpManager);
 
     /**
@@ -270,3 +260,4 @@ private:
 };
 
 #endif // WALLET_MANAGER_H
+

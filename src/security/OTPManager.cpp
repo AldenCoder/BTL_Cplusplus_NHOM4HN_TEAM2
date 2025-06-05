@@ -1,9 +1,3 @@
-/**
- * @file OTPManager.cpp
- * @brief Implementation of OTPManager
- * @author Team 2C
- */
-
 #include "OTPManager.h"
 #include "SecurityUtils.h"
 #include <iostream>
@@ -12,7 +6,7 @@
 /**
  * @brief Constructor
  */
-OTPManager::OTPManager() : securityUtils(nullptr) {
+OTPManager::OTPManager() {
     SecurityUtils::initialize();
 }
 
@@ -148,7 +142,9 @@ void OTPManager::sendOTP(const std::string& userId,
                         const std::string& otpCode,
                         const std::string& purpose,
                         const std::string& contactInfo) {
-      std::cout << "\n=== OTP SEND NOTIFICATION ===\n";
+    (void)otpCode; // Suppress unused parameter warning - in real implementation this would be sent
+    
+    std::cout << "\n=== OTP SEND NOTIFICATION ===\n";
     std::cout << "OTP code sent to: " << contactInfo << "\n";
     std::cout << "Purpose: " << purpose << "\n";
     std::cout << "User ID: " << userId << "\n";

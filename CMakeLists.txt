@@ -20,6 +20,10 @@ include_directories(src)
 # Tìm OpenSSL (cho hàm băm)
 find_package(OpenSSL REQUIRED)
 
+# Tìm SQLite3 (cho database)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(SQLITE3 REQUIRED sqlite3)
+
 # Tìm tất cả source files
 file(GLOB_RECURSE SOURCES
     "src/*.cpp"
@@ -33,7 +37,12 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(${PROJECT_NAME} 
     OpenSSL::SSL 
     OpenSSL::Crypto
+    ${SQLITE3_LIBRARIES}
 )
+
+# Include SQLite3 headers
+target_include_directories(${PROJECT_NAME} PRIVATE ${SQLITE3_INCLUDE_DIRS})
+target_compile_options(${PROJECT_NAME} PRIVATE ${SQLITE3_CFLAGS_OTHER})
 
 # Tạo thư mục cần thiết
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/data)
@@ -60,7 +69,7 @@ install(TARGETS ${PROJECT_NAME}
 
 # Package configuration
 set(CPACK_PACKAGE_NAME "WalletSystem")
-set(CPACK_PACKAGE_VENDOR "Team 2C")
+set(CPACK_PACKAGE_VENDOR "Team 2 C++")
 set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
 set(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
