@@ -7,11 +7,11 @@
 #include <memory>
 
 enum class TransactionType {
-    TRANSFER_IN,    // Receive points
-    TRANSFER_OUT,   // Send points
-    TRANSFER,       // General transfer transaction
-    INITIAL,        // Initial points from master wallet
-    ROLLBACK        // Transaction rollback
+    TRANSFER_IN,    // Receive points 0
+    TRANSFER_OUT,   // Send points 1
+    TRANSFER,       // General transfer transaction 2
+    INITIAL,        // Initial points from master wallet 3
+    ROLLBACK        // Transaction rollback 4
 };
 
 enum class TransactionStatus {

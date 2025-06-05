@@ -53,17 +53,20 @@ bool WalletManager::createUserWallet(const std::string& userId, const std::strin
             // Thêm vào cache
             walletCache[walletId] = wallet;
             
-            // Ghi log giao dịch phát hành điểm ban đầu
-            Transaction initTransaction(
-                SecurityUtils::generateUUID(),
-                "MASTER",
-                walletId,
-                INITIAL_USER_POINTS,
-                TransactionType::TRANSFER,
-                TransactionStatus::COMPLETED,
-                "Điểm khởi tạo cho user mới"
-            );
-            wallet->addTransaction(initTransaction);
+            // Lấy master wallet ID thực tế để ghi log giao dịch phát hành điểm ban đầu
+            std::string masterWalletId = dataManager->getMasterWalletId();
+            if (!masterWalletId.empty()) {
+                Transaction initTransaction(
+                    SecurityUtils::generateUUID(),
+                    masterWalletId,
+                    walletId,
+                    INITIAL_USER_POINTS,
+                    TransactionType::TRANSFER,
+                    TransactionStatus::COMPLETED,
+                    "Điểm khởi tạo cho user mới"
+                );
+                wallet->addTransaction(initTransaction);
+            }
             
             return true;
         } else {
@@ -293,38 +296,51 @@ std::string WalletManager::issuePointsFromMaster(const std::string& toWalletId,
             return "";
         }
 
-        // Kiểm tra ví tổng có đủ điểm không
-        if (!masterWallet->hasEnoughPoints(amount)) {
+        // Lấy master wallet ID thực tế (ví của user đăng nhập lần đầu)
+        std::string masterWalletId = dataManager->getMasterWalletId();
+        if (masterWalletId.empty()) {
+            std::cerr << "[ERROR] Cannot find master wallet ID!" << std::endl;
             return "";
         }
 
-        // Tạo giao dịch
-        std::string transactionId = SecurityUtils::generateUUID();
-        Transaction transaction(
-            transactionId,
-            "MASTER",
+        // Kiểm tra ví tổng có đủ điểm không
+        if (!masterWallet->hasEnoughPoints(amount)) {
+            std::cerr << "[ERROR] Master wallet insufficient balance!" << std::endl;
+            return "";
+        }
+
+        // Sử dụng atomic transfer với database để đảm bảo ACID compliance
+        std::string transactionId = dataManager->transferPointsWithId(
+            masterWalletId,
             toWalletId,
             amount,
-            TransactionType::TRANSFER,
-            TransactionStatus::COMPLETED,
             description
         );
 
-        // Thực hiện giao dịch
-        if (masterWallet->transferOut(amount) && toWallet->deposit(amount)) {
+        if (!transactionId.empty()) {
+            // Update master wallet object trong memory
+            masterWallet->transferOut(amount);
+            
+            // Update recipient wallet object trong memory
+            toWallet->deposit(amount);
+            
+            // Create transaction object to add to wallet history
+            Transaction transaction(
+                transactionId,
+                masterWalletId,
+                toWalletId,
+                amount,
+                TransactionType::INITIAL,
+                TransactionStatus::COMPLETED,
+                description
+            );
+            
             toWallet->addTransaction(transaction);
-            dataManager->saveWallet(toWallet);
-            
-            // Lưu giao dịch vào bảng transactions trong database
-            std::cout << "[DEBUG] issuePointsFromMaster: Saving transaction with IDs: from=" 
-                      << transaction.getFromWalletId() << " to=" << transaction.getToWalletId() << std::endl;
-            
-            if (!dataManager->saveTransaction(transaction)) {
-                std::cerr << "[ERROR] Failed to save issuePointsFromMaster transaction to database!" << std::endl;
-            }
             
             logTransaction(transaction, "COMPLETED", "Admin issued points successfully");
             return transactionId;
+        } else {
+            std::cerr << "[ERROR] Failed to execute atomic transfer for master wallet issuance!" << std::endl;
         }
 
         return "";
@@ -480,7 +496,7 @@ std::string WalletManager::executeAtomicTransfer(std::shared_ptr<Wallet> fromWal
                 fromWallet->getId(),
                 toWallet->getId(),
                 amount,
-                TransactionType::TRANSFER,
+                TransactionType::TRANSFER_OUT,
                 TransactionStatus::COMPLETED,
                 description
             );
@@ -490,7 +506,7 @@ std::string WalletManager::executeAtomicTransfer(std::shared_ptr<Wallet> fromWal
                 fromWallet->getId(),
                 toWallet->getId(),
                 amount,
-                TransactionType::TRANSFER,
+                TransactionType::TRANSFER_IN,
                 TransactionStatus::COMPLETED,
                 description
             );

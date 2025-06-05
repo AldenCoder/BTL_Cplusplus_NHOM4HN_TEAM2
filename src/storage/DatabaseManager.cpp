@@ -748,6 +748,27 @@ std::string DatabaseManager::transferPointsWithId(const std::string& fromWalletI
     }
 }
 
+std::string DatabaseManager::getMasterWalletId() {
+    std::lock_guard<std::mutex> lock(dbMutex);
+    
+    const char* sql = "SELECT wallet_id FROM users WHERE is_first_login = 1 LIMIT 1;";
+    sqlite3_stmt* stmt = prepareStatement(sql);
+    if (!stmt) {
+        return "";
+    }
+    
+    std::string masterWalletId;
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        const char* walletId = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+        if (walletId) {
+            masterWalletId = walletId;
+        }
+    }
+    
+    finalizeStatement(stmt);
+    return masterWalletId;
+}
+
 // ==================== TRANSACTION MANAGEMENT ====================
 
 bool DatabaseManager::saveTransaction(const Transaction& transaction) {

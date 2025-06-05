@@ -194,6 +194,12 @@ public:
                                     double amount, 
                                     const std::string& description);
 
+    /**
+     * @brief Get master wallet ID (wallet of first login user)
+     * @return Master wallet ID, empty string if not found
+     */
+    std::string getMasterWalletId();
+
     // ==================== TRANSACTION HISTORY ====================
     
     /**
