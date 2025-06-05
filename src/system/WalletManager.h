@@ -1,9 +1,3 @@
-/**
- * @file WalletManager.h
- * @brief Quản lý ví điểm thưởng và giao dịch
- * @author Team 2C
- */
-
 #ifndef WALLET_MANAGER_H
 #define WALLET_MANAGER_H
 
@@ -14,12 +8,8 @@
 #include <memory>
 #include <unordered_map>
 #include <vector>
-#include <mutex>
+#include "../thread_compat.h"
 
-/**
- * @struct TransferRequest
- * @brief Yêu cầu chuyển điểm
- */
 struct TransferRequest {
     std::string fromWalletId;   // ID ví gửi
     std::string toWalletId;     // ID ví nhận
@@ -270,3 +260,4 @@ private:
 };
 
 #endif // WALLET_MANAGER_H
+

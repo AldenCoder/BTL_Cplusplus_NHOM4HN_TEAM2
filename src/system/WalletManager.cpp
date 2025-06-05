@@ -1,9 +1,3 @@
-/**
- * @file WalletManager.cpp
- * @brief Triển khai quản lý ví điểm thưởng và giao dịch
- * @author Team 2C
- */
-
 #include "WalletManager.h"
 #include "../security/OTPManager.h"
 #include <iostream>
@@ -112,7 +106,7 @@ std::shared_ptr<Wallet> WalletManager::getWalletByUserId(const std::string& user
         return wallet;
     }
     catch (const std::exception& e) {
-        std::cerr << "Lỗi tìm ví theo user ID: " << e.what() << std::endl;
+        std::cerr << "Loi tim vi theo user ID: " << e.what() << std::endl;
         return nullptr;
     }
 }
@@ -170,11 +164,11 @@ TransferResult WalletManager::transferPoints(const TransferRequest& request) {
             dataManager->saveWallet(fromWallet);
             dataManager->saveWallet(toWallet);
         } else {
-            result.message = "Lỗi thực hiện giao dịch!";
+            result.message = "Loi thuc hien giao dich!";
         }
     }
     catch (const std::exception& e) {
-        result.message = "Lỗi hệ thống: " + std::string(e.what());
+        result.message = "Loi he thong: " + std::string(e.what());
     }
 
     return result;
@@ -189,7 +183,7 @@ std::string WalletManager::generateTransferOTP(const std::string& fromUserId,
         return otpManager->generateOTP(fromUserId, OTPType::TRANSFER);
     }
     catch (const std::exception& e) {
-        std::cerr << "Lỗi tạo OTP chuyển điểm: " << e.what() << std::endl;
+        std::cerr << "Loi tao OTP chuyen diem: " << e.what() << std::endl;
         return "";
     }
 }
@@ -216,7 +210,7 @@ std::vector<Transaction> WalletManager::getTransactionHistory(const std::string&
                   return a.getTimestamp() > b.getTimestamp();
               });
 
-    // Giới hạn số lượng nếu cần
+    // Gioi han so luong neu can
     if (limit > 0 && allTransactions.size() > static_cast<size_t>(limit)) {
         allTransactions.resize(limit);
     }
@@ -262,7 +256,7 @@ std::vector<std::string> WalletManager::findWalletsByOwner(const std::string& ow
         }
     }
     catch (const std::exception& e) {
-        std::cerr << "Lỗi tìm ví theo owner: " << e.what() << std::endl;
+        std::cerr << "Loi tim vi theo owner: " << e.what() << std::endl;
     }
 
     return walletIds;
@@ -283,7 +277,7 @@ bool WalletManager::setWalletLocked(const std::string& walletId, bool locked) {
         return dataManager->saveWallet(wallet);
     }
     catch (const std::exception& e) {
-        std::cerr << "Lỗi khóa/mở ví: " << e.what() << std::endl;
+        std::cerr << "Loi khoa/mo vi: " << e.what() << std::endl;
         return false;
     }
 }
@@ -328,7 +322,7 @@ std::string WalletManager::issuePointsFromMaster(const std::string& toWalletId,
         return "";
     }
     catch (const std::exception& e) {
-        std::cerr << "Lỗi phát hành điểm: " << e.what() << std::endl;
+        std::cerr << "Loi phat hanh diem: " << e.what() << std::endl;
         return "";
     }
 }
@@ -352,19 +346,17 @@ std::string WalletManager::getSystemStatistics() {
             } else {
                 activeWallets++;
             }
-        }
-
-        stats << "===== THỐNG KÊ HỆ THỐNG VÍ =====\n";
-        stats << "Tổng số ví: " << totalWallets << "\n";
-        stats << "Ví đang hoạt động: " << activeWallets << "\n";
-        stats << "Ví bị khóa: " << lockedWallets << "\n";
-        stats << "Tổng điểm trong hệ thống: " << std::fixed << std::setprecision(2) << totalPoints << "\n";
-        stats << "Điểm còn lại trong ví tổng: " << masterWallet->getTotalPoints() << "\n";
+        }        stats << "===== THONG KE HE THONG VI =====\n";
+        stats << "Tong so vi: " << totalWallets << "\n";
+        stats << "Vi dang hoat dong: " << activeWallets << "\n";
+        stats << "Vi bi khoa: " << lockedWallets << "\n";
+        stats << "Tong diem trong he thong: " << std::fixed << std::setprecision(2) << totalPoints << "\n";
+        stats << "Diem con lai trong vi tong: " << masterWallet->getTotalPoints() << "\n";
         
         return stats.str();
     }
     catch (const std::exception& e) {
-        return "Lỗi lấy thống kê: " + std::string(e.what());
+        return "Loi lay thong ke: " + std::string(e.what());
     }
 }
 
@@ -397,7 +389,7 @@ bool WalletManager::saveAllWallets() {
         return true;
     }
     catch (const std::exception& e) {
-        std::cerr << "Lỗi lưu tất cả ví: " << e.what() << std::endl;
+        std::cerr << "Loi luu tat ca vi: " << e.what() << std::endl;
         return false;
     }
 }
@@ -417,7 +409,7 @@ std::shared_ptr<Wallet> WalletManager::loadWalletToCache(const std::string& wall
         return wallet;
     }
     catch (const std::exception& e) {
-        std::cerr << "Lỗi tải ví vào cache: " << e.what() << std::endl;
+        std::cerr << "Loi tai vi vao cache: " << e.what() << std::endl;
         return nullptr;
     }
 }
@@ -511,7 +503,7 @@ std::string WalletManager::executeAtomicTransfer(std::shared_ptr<Wallet> fromWal
         return transactionId;
     }
     catch (const std::exception& e) {
-        std::cerr << "Lỗi thực hiện giao dịch atomic: " << e.what() << std::endl;
+        std::cerr << "Loi thuc hien giao dich atomic: " << e.what() << std::endl;
         return "";
     }
 }
@@ -542,7 +534,7 @@ void WalletManager::rollbackTransfer(std::shared_ptr<Wallet> fromWallet,
         logTransaction(rollbackTransaction, "ROLLBACK", "Transaction rolled back");
     }
     catch (const std::exception& e) {
-        std::cerr << "Lỗi rollback giao dịch: " << e.what() << std::endl;
+        std::cerr << "Loi rollback giao dich: " << e.what() << std::endl;
     }
 }
 
@@ -559,6 +551,6 @@ void WalletManager::logTransaction(const Transaction& transaction,
                   << ", Message: " << message << std::endl;
     }
     catch (const std::exception& e) {
-        std::cerr << "Lỗi ghi log giao dịch: " << e.what() << std::endl;
+        std::cerr << "Loi ghi log giao dich: " << e.what() << std::endl;
     }
 }

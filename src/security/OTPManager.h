@@ -1,9 +1,3 @@
-/**
- * @file OTPManager.h
- * @brief Header file cho OTPManager class
- * @author Team 2C
- */
-
 #ifndef OTPMANAGER_H
 #define OTPMANAGER_H
 

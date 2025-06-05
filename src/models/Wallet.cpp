@@ -1,9 +1,3 @@
-/**
- * @file Wallet.cpp
- * @brief Implementation of Wallet class and related components
- * @author Team 2C
- */
-
 #include <iostream>
 #include "Wallet.h"
 #include "../security/SecurityUtils.h"

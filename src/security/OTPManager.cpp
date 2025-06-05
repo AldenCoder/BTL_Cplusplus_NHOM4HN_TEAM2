@@ -1,9 +1,3 @@
-/**
- * @file OTPManager.cpp
- * @brief Implementation of OTPManager
- * @author Team 2C
- */
-
 #include "OTPManager.h"
 #include "SecurityUtils.h"
 #include <iostream>

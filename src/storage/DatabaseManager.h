@@ -1,15 +1,3 @@
-/**
- * @file DatabaseManager.h
- * @brief SQLite-based data storage manager
- * @author Team 2C
- * 
- * This replaces the file-based JSON storage with SQLite to provide:
- * - ACID compliance for data integrity
- * - Concurrent access safety with built-in locking
- * - Atomic transactions to prevent data corruption
- * - Better performance and reliability
- */
-
 #ifndef DATABASE_MANAGER_H
 #define DATABASE_MANAGER_H
 
@@ -18,23 +6,17 @@
 #include <string>
 #include <vector>
 #include <memory>
-#include <mutex>
+#include "../thread_compat.h"
+#include <chrono>
 #include <sqlite3.h>
+// #include "../../sqlite/sqlite-amalgamation-3460100/sqlite3.h"
 
-/**
- * @enum BackupType
- * @brief Backup type enumeration
- */
 enum class BackupType {
     MANUAL,     // Manual backup
     AUTO,       // Automatic backup
     EMERGENCY   // Emergency backup
 };
 
-/**
- * @struct BackupInfo
- * @brief Backup information structure
- */
 struct BackupInfo {
     std::string backupId;
     std::string filename;

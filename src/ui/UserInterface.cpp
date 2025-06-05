@@ -4,20 +4,26 @@
 #include <iomanip>
 #include <sstream>
 #include <regex>
-// #include <conio.h>  // For Windows
+#ifdef _WIN32
+#include <conio.h>  // For Windows getch()
+#else
 #include <termios.h>  // For macOS/Linux
 #include <unistd.h>
+#endif
 // #include <sys/ioctl.h>
 #include <limits>
 #include <algorithm>
 #include <cctype>
 
-#ifndef _WIN32 //for mac
+#ifdef _WIN32
+// Windows version uses conio.h getch() directly - no need to redefine
+#else
+// macOS/Linux version
 int getch() {
     struct termios oldattr, newattr;
     int ch;
     tcgetattr(STDIN_FILENO, &oldattr);
-    newattr = oldattr;
+        newattr = oldattr;
     newattr.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &newattr);
     ch = getchar();
@@ -26,7 +32,7 @@ int getch() {
 }
 #endif
 
-UserInterface::UserInterface(AuthSystem& authSys) 
+UserInterface::UserInterface(AuthSystem& authSys)
     : authSystem(authSys), isRunning(false) {
     // Initialize WalletManager using the DatabaseManager from AuthSystem
     auto dataManager = authSystem.getDataManager();
@@ -470,13 +476,13 @@ void UserInterface::transferPoints() {
         showError("Your wallet is not available!");
         pauseScreen();
         return;
-    }
-
-    std::cout << "Current balance: " << formatCurrency(fromWallet->getBalance()) << "\n\n";
+    }    std::cout << "Current balance: " << formatCurrency(fromWallet->getBalance()) << "\n\n";
 
     // Enter recipient information
     std::string recipientUsername = getInput("Recipient username: ");
-    if (recipientUsername.empty()) return;    auto recipient = authSystem.findUserByUsername(recipientUsername);
+    if (recipientUsername.empty()) return;
+    
+    auto recipient = authSystem.findUserByUsername(recipientUsername);
     if (!recipient) {
         showError("User not found!");
         pauseScreen();
@@ -560,10 +566,10 @@ void UserInterface::viewTransactionHistory() {
         showError("Cannot find your wallet!");
         pauseScreen();
         return;
-    }
-
-    int limit = getIntInput("Number of transactions to view (0 = all): ", 0, 100);
-    if (limit == 0) limit = -1;    auto transactions = walletManager->getTransactionHistory(wallet->getId(), limit);
+    }    int limit = getIntInput("Number of transactions to view (0 = all): ", 0, 100);
+    if (limit == 0) limit = -1;
+    
+    auto transactions = walletManager->getTransactionHistory(wallet->getId(), limit);
     
     if (transactions.empty()) {
         showInfo("No transactions found!");
@@ -687,11 +693,11 @@ void UserInterface::createNewAccount() {
             showError("Invalid phone number!");
             phoneNumber = "";
         }
-    } while (phoneNumber.empty());
-
-    std::vector<std::string> roleOptions = {"Regular User", "Admin"};
+    } while (phoneNumber.empty());    std::vector<std::string> roleOptions = {"Regular User", "Admin"};
     int roleChoice = showMenuSelection("Select role:", roleOptions);
-    UserRole role = (roleChoice == 2) ? UserRole::ADMIN : UserRole::REGULAR;    showInfo("Creating account...");
+    UserRole role = (roleChoice == 2) ? UserRole::ADMIN : UserRole::REGULAR;
+    
+    showInfo("Creating account...");
     
     auto result = authSystem.createAccount(username, fullName, email, phoneNumber, role, true);
     
@@ -733,15 +739,13 @@ void UserInterface::manageUserAccount() {
         showError("Access denied! Admin privileges required.");
         pauseScreen();
         return;
-    }
-
-    while (true) {
+    }    while (true) {
         clearScreen();
         showHeader();
         
-        std::cout << " ╭─────────────────────────────────────────────────────────╮\n";
-        std::cout << " │                 USER ACCOUNT MANAGEMENT                 │\n";
-        std::cout << " ╰─────────────────────────────────────────────────────────╯\n\n";
+        std::cout << " +----------------------------------------------------------+\n";
+        std::cout << " |                 USER ACCOUNT MANAGEMENT                  |\n";
+        std::cout << " +----------------------------------------------------------+\n\n";
         
         std::cout << " 1. View All Users\n";
         std::cout << " 2. Search User by Username\n";
@@ -785,10 +789,10 @@ void UserInterface::issuePointsFromMaster() {
     
     std::cout << "+--------------------------------------------------+\n";
     std::cout << "|         ISSUE POINTS FROM MASTER WALLET          |\n";
-    std::cout << "+--------------------------------------------------+\n\n";
-
-    std::string username = getInput("Recipient username: ");
-    if (username.empty()) return;    auto user = authSystem.findUserByUsername(username);
+    std::cout << "+--------------------------------------------------+\n\n";    std::string username = getInput("Recipient username: ");
+    if (username.empty()) return;
+    
+    auto user = authSystem.findUserByUsername(username);
     if (!user) {
         showError("User not found!");
         pauseScreen();
@@ -1211,14 +1215,17 @@ void UserInterface::pauseScreen() {
 }
 
 void UserInterface::clearScreen() {
-    // system("cls"); // Windows
+#ifdef _WIN32
+    system("cls"); // Windows
+#else
     system("clear"); // Linux/Mac
+#endif
 }
 
 void UserInterface::showHeader() {
     std::cout << "+--------------------------------------------------+\n";
     std::cout << "|        WALLET POINT MANAGEMENT SYSTEM            |\n";
-    std::cout << "|                   Team 2C                        |\n";
+    std::cout << "|                   Team 2 C++                     |\n";
     std::cout << "+--------------------------------------------------+\n\n";
 }
 
@@ -1343,10 +1350,9 @@ int UserInterface::showMenuSelection(const std::string& title, const std::vector
 void UserInterface::searchUserByUsername() {
     clearScreen();
     showHeader();
-    
-    std::cout << " ╭─────────────────────────────────────────────────────────╮\n";
-    std::cout << " │                   SEARCH USER                           │\n";
-    std::cout << " ╰─────────────────────────────────────────────────────────╯\n\n";
+    std::cout << " +-------------------------------------------------------------+\n";
+    std::cout << " |                   SEARCH USER                               |\n";
+    std::cout << " +-------------------------------------------------------------+\n\n";
     
     std::cout << " Enter username to search: ";
     std::string username;
@@ -1365,10 +1371,10 @@ void UserInterface::searchUserByUsername() {
         return;
     }
     
-    // Display user information
-    std::cout << " ╭─────────────────────────────────────────────────────────╮\n";
-    std::cout << " │                   USER INFORMATION                      │\n";
-    std::cout << " ╰─────────────────────────────────────────────────────────╯\n\n";
+    // Display user information    
+    std::cout << " +-------------------------------------------------------------+\n";
+    std::cout << " |                   USER INFORMATION                          |\n";
+    std::cout << " +-------------------------------------------------------------+\n\n";
     
     std::cout << " User ID      : " << user->getId() << "\n";
     std::cout << " Username     : " << user->getUsername() << "\n";
@@ -1385,10 +1391,9 @@ void UserInterface::searchUserByUsername() {
 void UserInterface::createNewUserAccount() {
     clearScreen();
     showHeader();
-    
-    std::cout << " ╭─────────────────────────────────────────────────────────╮\n";
-    std::cout << " │                CREATE NEW ACCOUNT                       │\n";
-    std::cout << " ╰─────────────────────────────────────────────────────────╯\n\n";
+    std::cout << " +-------------------------------------------------------------+\n";
+    std::cout << " |                CREATE NEW ACCOUNT                           |\n";
+    std::cout << " +-------------------------------------------------------------+\n\n";
     
     std::string username, fullName, email, phoneNumber;
     UserRole role = UserRole::REGULAR;
@@ -1434,10 +1439,9 @@ void UserInterface::createNewUserAccount() {
 void UserInterface::editUserInformation() {
     clearScreen();
     showHeader();
-    
-    std::cout << " ╭─────────────────────────────────────────────────────────╮\n";
-    std::cout << " │                 EDIT USER INFORMATION                   │\n";
-    std::cout << " ╰─────────────────────────────────────────────────────────╯\n\n";
+    std::cout << " +-------------------------------------------------------------+\n";
+    std::cout << " |                 EDIT USER INFORMATION                       |\n";
+    std::cout << " +-------------------------------------------------------------+\n\n";
     
     std::cout << " Enter username to edit: ";
     std::string username;
@@ -1511,10 +1515,9 @@ void UserInterface::editUserInformation() {
 void UserInterface::resetUserPassword() {
     clearScreen();
     showHeader();
-    
-    std::cout << " ╭─────────────────────────────────────────────────────────╮\n";
-    std::cout << " │                 RESET USER PASSWORD                     │\n";
-    std::cout << " ╰─────────────────────────────────────────────────────────╯\n\n";
+    std::cout << " +-------------------------------------------------------------+\n";
+    std::cout << " |                 RESET USER PASSWORD                         |\n";
+    std::cout << " +-------------------------------------------------------------+\n\n";
     
     std::cout << " Enter username to reset password: ";
     std::string username;
@@ -1565,10 +1568,9 @@ void UserInterface::resetUserPassword() {
 void UserInterface::viewUserWalletDetails() {
     clearScreen();
     showHeader();
-    
-    std::cout << " ╭─────────────────────────────────────────────────────────╮\n";
-    std::cout << " │                USER WALLET DETAILS                      │\n";
-    std::cout << " ╰─────────────────────────────────────────────────────────╯\n\n";
+    std::cout << " +-------------------------------------------------------------+\n";
+    std::cout << " |                USER WALLET DETAILS                          |\n";
+    std::cout << " +-------------------------------------------------------------+\n\n";
     
     std::cout << " Enter username to view wallet: ";
     std::string username;
@@ -1588,10 +1590,9 @@ void UserInterface::viewUserWalletDetails() {
         pauseScreen();
         return;
     }
-    
-    std::cout << " ╭─────────────────────────────────────────────────────────╮\n";
-    std::cout << " │                   WALLET INFORMATION                    │\n";
-    std::cout << " ╰─────────────────────────────────────────────────────────╯\n\n";
+    std::cout << " +-------------------------------------------------------------+\n";
+    std::cout << " |                   WALLET INFORMATION                        |\n";
+    std::cout << " +-------------------------------------------------------------+\n\n";
     
     std::cout << " User         : " << user->getFullName() << " (" << user->getUsername() << ")\n";
     std::cout << " Wallet ID    : " << wallet->getId() << "\n";
@@ -1602,20 +1603,19 @@ void UserInterface::viewUserWalletDetails() {
     auto transactions = wallet->getTransactionHistory();
     if (!transactions.empty()) {
         std::cout << "\n Recent Transactions (last 5):\n";
-        std::cout << " ┌──────────┬──────────────┬──────────┬─────────────────────┐\n";
-        std::cout << " │   Date   │     Type     │  Amount  │    Description      │\n";
-        std::cout << " ├──────────┼──────────────┼──────────┼─────────────────────┤\n";
+        std::cout << " +----------+--------------+----------+---------------------+\n";        
+        std::cout << " |   Date   |     Type     |  Amount  |    Description      |\n";
+        std::cout << " +----------+--------------+----------+---------------------+\n";
         
         int count = 0;
         for (auto it = transactions.rbegin(); it != transactions.rend() && count < 5; ++it, ++count) {
             const auto& tx = *it;
-            std::string typeStr = (tx.getType() == TransactionType::TRANSFER) ? "Transfer" : "Other";
-            std::cout << " │ " << std::setw(8) << formatDate(tx.getTimestamp()) 
-                      << " │ " << std::setw(12) << typeStr
-                      << " │ " << std::setw(8) << std::fixed << std::setprecision(2) << tx.getAmount()
-                      << " │ " << std::setw(19) << tx.getDescription().substr(0, 19) << " │\n";
+            std::string typeStr = (tx.getType() == TransactionType::TRANSFER) ? "Transfer" : "Other";            std::cout << " | " << std::setw(8) << formatDate(tx.getTimestamp()) 
+                      << " | " << std::setw(12) << typeStr
+                      << " | " << std::setw(8) << std::fixed << std::setprecision(2) << tx.getAmount()
+                      << " | " << std::setw(19) << tx.getDescription().substr(0, 19) << " |\n";
         }
-        std::cout << " └──────────┴──────────────┴──────────┴─────────────────────┘\n";
+        std::cout << " +----------+--------------+----------+---------------------+\n";
     }
     
     pauseScreen();

@@ -1,9 +1,3 @@
-/**
- * @file DatabaseManager.cpp
- * @brief SQLite-based database manager implementation
- * @author Team 2C
- */
-
 #include "DatabaseManager.h"
 #include "../security/SecurityUtils.h"
 #include <iostream>
@@ -16,6 +10,7 @@
 
 #ifdef _WIN32
 #include <direct.h>
+#include <sys/stat.h>  // Add stat support for Windows
 #define mkdir _mkdir
 #else
 #include <sys/stat.h>

@@ -1,9 +1,3 @@
-/**
- * @file AuthSystem.h
- * @brief Authentication system and user management
- * @author Team 2C
- */
-
 #ifndef AUTH_SYSTEM_H
 #define AUTH_SYSTEM_H
 

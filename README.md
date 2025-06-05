@@ -97,12 +97,9 @@ Một hệ thống quản lý điểm thưởng an toàn dựa trên SQLite đư
 
 #### **Windows**
 ```bash
-# Cài đặt MinGW-w64 hoặc Visual Studio Build Tools
-# Tải từ: https://www.mingw-w64.org/downloads/
-
-# Cài đặt SQLite3 development libraries
-# Tải từ: https://www.sqlite.org/download.html
-# Giải nén sqlite3.h và libsqlite3.a vào thư mục include/lib của compiler
+cài sqlite
+.\build.ps1
+.\bin\wallet_system.exe
 ```
 
 #### **macOS**
@@ -162,58 +159,6 @@ make
 # Chạy ứng dụng
 ./WalletSystem
 ```
-
-#### **Lựa chọn 3: Biên dịch Thủ công**
-```bash
-# Clone repository
-git clone <repository-url>
-cd team2C
-
-# Cho phép thực thi script build và chạy
-chmod +x build.sh
-./build.sh
-
-# Chạy ứng dụng
-./wallet_system
-```
-
-### 🔧 Tùy chọn Biên dịch
-
-#### **Biên dịch Development**
-```bash
-make debug
-# Hoặc với CMake:
-cmake -DCMAKE_BUILD_TYPE=Debug ..
-make
-```
-
-#### **Biên dịch Clean**
-```bash
-make clean
-make
-```
-
-#### **Biên dịch riêng cho Windows**
-```bash
-# Sử dụng MinGW-w64
-g++ -std=c++17 -O2 -Wall -Wextra -Isrc -o wallet_system.exe src/**/*.cpp -lsqlite3
-
-# Lưu ý: Đảm bảo sqlite3.dll nằm trong cùng thư mục với file thực thi
-```
-
-## 📋 Yêu cầu Hệ thống
-
-### **Yêu cầu Tối thiểu**
-- **Hệ điều hành**: Windows 10+, macOS 10.14+, hoặc Linux (kernel 3.10+)
-- **Compiler**: GCC 7+ hoặc Clang 5+ với hỗ trợ C++17
-- **Bộ nhớ**: 256 MB RAM
-- **Lưu trữ**: 50 MB dung lượng trống
-- **Dependencies**: Thư viện SQLite3
-
-### **Yêu cầu Khuyến nghị**
-- **Bộ nhớ**: 512 MB RAM
-- **Lưu trữ**: 500 MB dung lượng trống (cho dữ liệu và sao lưu)
-- **Mạng**: Cho tích hợp OTP qua email/SMS trong tương lai
 
 ## 🎯 Hướng dẫn Sử dụng
 
@@ -446,15 +391,6 @@ sqlite3 data/wallet_system.db "PRAGMA journal_mode=WAL;"
 sqlite3 data/wallet_system.db "ANALYZE;"
 ```
 
-## 📊 Thống kê Hệ thống
-
-Ứng dụng cung cấp thống kê hệ thống toàn diện bao gồm:
-
-- **Thống kê Người dùng**: Tổng số người dùng, người dùng hoạt động, số lượng admin
-- **Thống kê Giao dịch**: Tổng số giao dịch, khối lượng chuyển, kích thước giao dịch trung bình
-- **Thống kê Ví**: Tổng số ví, tổng số dư, ví bị khóa
-- **Tình trạng Hệ thống**: Kích thước cơ sở dữ liệu, trạng thái sao lưu, thời gian hoạt động
-
 ## 🔄 Sao lưu & Khôi phục
 
 ### **Sao lưu Tự động**
@@ -478,18 +414,6 @@ sqlite3 data/wallet_system.db "ANALYZE;"
 4. Chọn file sao lưu từ danh sách
 5. Xác nhận khôi phục (tạo sao lưu an toàn trước)
 
-## 📄 Giấy phép
-
-Dự án này được phát triển cho mục đích giáo dục. Vui lòng kiểm tra hướng dẫn của tổ chức bạn về sử dụng và phân phối.
-
-## 🤝 Đóng góp
-
-Đây là một dự án học thuật. Để đóng góp hoặc đề xuất, vui lòng liên hệ với nhóm phát triển.
-
-## 📞 Hỗ trợ
-
-Để được hỗ trợ kỹ thuật hoặc có câu hỏi về dự án này, vui lòng liên hệ với nhóm phát triển hoặc tham khảo tài liệu dự án.
-
 ## 📚 Tài liệu Tham khảo
 
 1. **CPP OTP**: [https://github.com/patzol768/cpp-otp](https://github.com/patzol768/cpp-otp) - Thư viện OTP cho C++
@@ -499,4 +423,4 @@ Dự án này được phát triển cho mục đích giáo dục. Vui lòng ki�
 5. **C++17 Reference**: [https://en.cppreference.com/w/cpp/17](https://en.cppreference.com/w/cpp/17) - Tài liệu C++17
 6. **SQLite Documentation**: [https://www.sqlite.org/docs.html](https://www.sqlite.org/docs.html) - Tài liệu SQLite
 
-**Nhóm 2C** - Hệ thống Quản lý Ví Điểm Thưởng © 2025
+**Nhóm 2 C++** - Hệ thống Quản lý Ví Điểm Thưởng © 2025

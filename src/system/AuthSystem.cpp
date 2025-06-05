@@ -1,9 +1,3 @@
-/**
- * @file AuthSystem.cpp
- * @brief Implementation of authentication system and user management
- * @author Team 2C
- */
-
 #include "AuthSystem.h"
 #include "../security/OTPManager.h"
 #include "WalletManager.h"
@@ -294,7 +288,7 @@ bool AuthSystem::changePassword(const std::string& userId,
         return dataManager->saveUser(user);
     }
     catch (const std::exception& e) {
-        std::cerr << "Lỗi đổi mật khẩu: " << e.what() << std::endl;
+        std::cerr << "Loi doi mat khau: " << e.what() << std::endl;
         return false;
     }
 }
@@ -324,7 +318,7 @@ bool AuthSystem::updateProfile(const std::string& userId,
         return dataManager->saveUser(user);
     }
     catch (const std::exception& e) {
-        std::cerr << "Lỗi cập nhật thông tin: " << e.what() << std::endl;
+        std::cerr << "Loi cap nhat thong tin: " << e.what() << std::endl;
         return false;
     }
 }
@@ -339,7 +333,7 @@ std::string AuthSystem::requestProfileUpdateOTP(const std::string& userId) {
         return otpManager->generateOTP(userId, OTPType::PROFILE_UPDATE);
     }
     catch (const std::exception& e) {
-        std::cerr << "Lỗi tạo OTP: " << e.what() << std::endl;
+        std::cerr << "Loi tao OTP: " << e.what() << std::endl;
         return "";
     }
 }
@@ -375,7 +369,7 @@ std::vector<std::shared_ptr<User>> AuthSystem::getAllUsers() {
         users = dataManager->loadAllUsers();
     }
     catch (const std::exception& e) {
-        std::cerr << "Lỗi tải danh sách user: " << e.what() << std::endl;
+        std::cerr << "Loi tai danh sach user: " << e.what() << std::endl;
     }
 
     return users;
@@ -407,7 +401,7 @@ std::shared_ptr<User> AuthSystem::findUserById(const std::string& userId) {
         return nullptr;
     }
     catch (const std::exception& e) {
-        std::cerr << "Lỗi tìm user: " << e.what() << std::endl;
+        std::cerr << "Loi tim user: " << e.what() << std::endl;
         return nullptr;
     }
 }
@@ -426,7 +420,7 @@ bool AuthSystem::saveUser(std::shared_ptr<User> user) {
         return success;
     }
     catch (const std::exception& e) {
-        std::cerr << "Lỗi lưu user: " << e.what() << std::endl;
+        std::cerr << "Loi luu user: " << e.what() << std::endl;
         return false;
     }
 }
@@ -511,7 +505,7 @@ std::shared_ptr<User> AuthSystem::loadUserToCache(const std::string& username) {
         return nullptr;
     }
     catch (const std::exception& e) {
-        std::cerr << "Lỗi tải user vào cache: " << e.what() << std::endl;
+        std::cerr << "Loi tai user vao cache: " << e.what() << std::endl;
         return nullptr;
     }
 }

@@ -1,27 +1,9 @@
-/**
- * @file SecurityUtils.h
- * @brief Các tiện ích bảo mật - băm mật khẩu, tạo OTP, mã hóa
- * @author Team 2C
- */
-
 #ifndef SECURITY_UTILS_H
 #define SECURITY_UTILS_H
-
 #include <string>
 #include <random>
 #include <chrono>
 #include <unordered_map>
-
-/**
- * @class SecurityUtils
- * @brief Lớp tiện ích bảo mật
- * 
- * Cung cấp các chức năng:
- * - Băm mật khẩu bằng SHA256 + salt
- * - Tạo mật khẩu tự động
- * - Tạo và xác thực OTP
- * - Tạo UUID
- */
 class SecurityUtils {
 private:
     static std::mt19937 rng;  // Random number generator
