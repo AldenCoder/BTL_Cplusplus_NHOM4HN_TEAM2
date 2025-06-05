@@ -333,15 +333,17 @@ void UserInterface::logout() {
 void UserInterface::viewProfile() {
     clearScreen();
     showHeader();
-      std::cout << "+--------------------------------------------------+\n";
+    std::cout << "+--------------------------------------------------+\n";
     std::cout << "|                PERSONAL INFORMATION              |\n";
     std::cout << "+--------------------------------------------------+\n\n";
 
     auto user = authSystem.getCurrentUser();
     displayUserInfo(*user);
-    std::cout << "| 0. Go back                                       |\n";
-    int choice = getIntInput("Choose function: ", 1, 12);
-    handleGobackMenu(choice);
+    std::cout << "| Press Tab to return                                 |\n";
+    if (isTabPressed()) {
+        showAdminMenu();
+        return;
+    }
 }
 
 void UserInterface::changePassword() {
@@ -351,10 +353,35 @@ void UserInterface::changePassword() {
     std::cout << "+--------------------------------------------------+\n";
     std::cout << "|                CHANGE PASSWORD                   |\n";
     std::cout << "+--------------------------------------------------+\n\n";
+    std::cout << "\n+--------------------------------------------------+\n";
+    std::cout << "| Press Tab to return                                 |\n";
+    std::cout << "+--------------------------------------------------+\n";
     
     std::string oldPassword = getPassword("Current password: ");
+    if (oldPassword.empty()) {
+        if (!confirmAction("Are you sure you want to cancel?")) {
+            showInfo("Cancelled successfully.!");
+            showAdminMenu();
+            return;
+        }
+    }
     std::string newPassword = getPassword("New password (at least 8 characters): ");
+    if (newPassword.empty()) {
+        if (!confirmAction("Are you sure you want to cancel?")) {
+            showInfo("Cancelled successfully.!");
+            showAdminMenu();
+            return;
+        }
+    }
     std::string confirmPassword = getPassword("Confirm new password: ");
+
+    if (confirmPassword.empty()) {
+        if (!confirmAction("Are you sure you want to cancel?")) {
+            showInfo("Cancelled successfully.!");
+            showAdminMenu();
+            return;
+        }
+    }
     
     if (newPassword != confirmPassword) {
         showError("Passwords do not match!");
@@ -523,7 +550,8 @@ void UserInterface::transferPoints() {
     std::cout << "From: " << user->getFullName() << "\n";
     std::cout << "To: " << recipient->getFullName() << "\n";
     std::cout << "Amount: " << formatCurrency(amount) << "\n";
-    std::cout << "Description: " << description << "\n\n";    if (!confirmAction("Are you sure you want to proceed with this transaction?")) {
+    std::cout << "Description: " << description << "\n\n";
+    if (!confirmAction("Are you sure you want to proceed with this transaction?")) {
         showInfo("Transaction cancelled!");
         pauseScreen();
         return;
@@ -1146,6 +1174,10 @@ std::string UserInterface::getPassword(const std::string& prompt) {
     char ch;
     
     while ((ch = getch()) != '\r' && ch != '\n') { // Support both \r and \n
+        if (ch == 9) { // Check Tab press
+            std::cout << "\n";
+            return "";
+        }
         if (ch == '\b' || ch == 127) { // Backspace (127 is DEL on some systems)
             if (!password.empty()) {
                 password.pop_back();
@@ -1633,6 +1665,12 @@ void UserInterface::viewUserWalletDetails() {
     }
     
     pauseScreen();
-void gobackMenu() {
+    
+bool UserInterface::isTabPressed() {
+    char ch = getch();  // Đọc 1 ký tự ngay lập tức (block chờ người bấm)
 
+    if (ch == 9) {      // Nếu là Tab
+        return true;
+    }
+    return false;
 }

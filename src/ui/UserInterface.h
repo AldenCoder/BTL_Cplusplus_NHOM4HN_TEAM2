@@ -343,6 +343,12 @@ private:
      * @return User's choice (1-based index)
      */
     int showMenuSelection(const std::string& title, const std::vector<std::string>& options);
+
+    /**
+     * @brief Cancel current action and back to step before;
+     * @return true when user press Tab;
+     */
+    static bool isTabPressed();
 };
 
 #endif // USER_INTERFACE_H
