@@ -59,6 +59,15 @@ bool DatabaseManager::initialize() {
         return false;
     }
     
+    // Enable foreign keys IMMEDIATELY after opening
+    char* errMsg = nullptr;
+    rc = sqlite3_exec(db, "PRAGMA foreign_keys=ON;", nullptr, nullptr, &errMsg);
+    if (rc != SQLITE_OK) {
+        std::cerr << "Failed to enable foreign keys: " << errMsg << std::endl;
+        sqlite3_free(errMsg);
+        return false;
+    }
+    
     // Enable WAL mode for better concurrency
     if (!enableWALMode()) {
         std::cerr << "Failed to enable WAL mode" << std::endl;
@@ -76,7 +85,7 @@ bool DatabaseManager::initialize() {
 }
 
 bool DatabaseManager::enableWALMode() {
-    const char* sql = "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA foreign_keys=ON;";
+    const char* sql = "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;";
     char* errMsg = nullptr;
     int rc = sqlite3_exec(db, sql, nullptr, nullptr, &errMsg);
     
@@ -85,6 +94,7 @@ bool DatabaseManager::enableWALMode() {
         sqlite3_free(errMsg);
         return false;
     }
+    
     return true;
 }
 
@@ -507,51 +517,9 @@ bool DatabaseManager::saveWallet(const Wallet& wallet) {
     finalizeStatement(stmt);
     
     if (success) {
-        if (commitTransaction()) {
-            // Force WAL checkpoint to ensure data is written to main database
-            char* errMsg = nullptr;
-            int rc = sqlite3_exec(db, "PRAGMA wal_checkpoint(FULL);", nullptr, nullptr, &errMsg);
-            if (rc != SQLITE_OK) {
-                std::cerr << "[WARNING] WAL checkpoint failed: " << errMsg << std::endl;
-                sqlite3_free(errMsg);
-            }
-            
-            // Verify wallet was actually saved by immediately querying it
-            const char* verifySql = "SELECT COUNT(*) FROM wallets WHERE wallet_id = ?;";
-            sqlite3_stmt* verifyStmt = prepareStatement(verifySql);
-            if (verifyStmt) {
-                sqlite3_bind_text(verifyStmt, 1, wallet.getWalletId().c_str(), -1, SQLITE_STATIC);
-                if (sqlite3_step(verifyStmt) == SQLITE_ROW) {
-                    int count = sqlite3_column_int(verifyStmt, 0);
-                    if (count == 0) {
-                        std::cerr << "[ERROR] CRITICAL: Wallet was not actually saved to database!" << std::endl;
-                    }
-                }
-                finalizeStatement(verifyStmt);
-            }
-            
-            // Also verify that owner_id exists in users table (foreign key check)
-            const char* fkSql = "SELECT COUNT(*) FROM users WHERE user_id = ?;";
-            sqlite3_stmt* fkStmt = prepareStatement(fkSql);
-            if (fkStmt) {
-                sqlite3_bind_text(fkStmt, 1, wallet.getOwnerId().c_str(), -1, SQLITE_STATIC);
-                if (sqlite3_step(fkStmt) == SQLITE_ROW) {
-                    int userCount = sqlite3_column_int(fkStmt, 0);
-                    if (userCount == 0) {
-                        std::cerr << "[ERROR] Foreign key constraint violation: User " << wallet.getOwnerId() << " does not exist!" << std::endl;
-                    }
-                }
-                finalizeStatement(fkStmt);
-            }
-        } else {
-            std::cerr << "[ERROR] Failed to commit transaction!" << std::endl;
-            rollbackTransaction();
-            return false;
-        }
+        commitTransaction();
     } else {
-        std::cerr << "[ERROR] Failed to save wallet to database!" << std::endl;
         rollbackTransaction();
-        return false;
     }
     
     return success;
@@ -663,9 +631,18 @@ bool DatabaseManager::transferPoints(const std::string& fromWalletId,
                                     const std::string& toWalletId, 
                                     double amount, 
                                     const std::string& description) {
+    // Delegate to transferPointsWithId and return true if we get a transaction ID
+    std::string transactionId = transferPointsWithId(fromWalletId, toWalletId, amount, description);
+    return !transactionId.empty();
+}
+
+std::string DatabaseManager::transferPointsWithId(const std::string& fromWalletId, 
+                                                  const std::string& toWalletId, 
+                                                  double amount, 
+                                                  const std::string& description) {
     std::lock_guard<std::mutex> lock(dbMutex);
     
-    if (!beginTransaction()) return false;
+    if (!beginTransaction()) return "";
     
     try {
         // Get source wallet balance
@@ -673,7 +650,7 @@ bool DatabaseManager::transferPoints(const std::string& fromWalletId,
         sqlite3_stmt* checkStmt = prepareStatement(checkSql);
         if (!checkStmt) {
             rollbackTransaction();
-            return false;
+            return "";
         }
         
         sqlite3_bind_text(checkStmt, 1, fromWalletId.c_str(), -1, SQLITE_STATIC);
@@ -684,13 +661,13 @@ bool DatabaseManager::transferPoints(const std::string& fromWalletId,
         } else {
             finalizeStatement(checkStmt);
             rollbackTransaction();
-            return false;
+            return "";
         }
         finalizeStatement(checkStmt);
         
         if (fromBalance < amount) {
             rollbackTransaction();
-            return false; // Insufficient funds
+            return ""; // Insufficient funds
         }
         
         // Update source wallet
@@ -698,7 +675,7 @@ bool DatabaseManager::transferPoints(const std::string& fromWalletId,
         sqlite3_stmt* debitStmt = prepareStatement(debitSql);
         if (!debitStmt) {
             rollbackTransaction();
-            return false;
+            return "";
         }
         
         sqlite3_bind_double(debitStmt, 1, amount);
@@ -707,7 +684,7 @@ bool DatabaseManager::transferPoints(const std::string& fromWalletId,
         if (!executeStatement(debitStmt)) {
             finalizeStatement(debitStmt);
             rollbackTransaction();
-            return false;
+            return "";
         }
         finalizeStatement(debitStmt);
         
@@ -716,7 +693,7 @@ bool DatabaseManager::transferPoints(const std::string& fromWalletId,
         sqlite3_stmt* creditStmt = prepareStatement(creditSql);
         if (!creditStmt) {
             rollbackTransaction();
-            return false;
+            return "";
         }
         
         sqlite3_bind_double(creditStmt, 1, amount);
@@ -725,32 +702,58 @@ bool DatabaseManager::transferPoints(const std::string& fromWalletId,
         if (!executeStatement(creditStmt)) {
             finalizeStatement(creditStmt);
             rollbackTransaction();
-            return false;
+            return "";
         }
         finalizeStatement(creditStmt);
         
-        // Record transaction
+        // Record transaction directly (no separate transaction needed since we're already in one)
         std::string transactionId = SecurityUtils::generateUUID();
-        Transaction transaction(transactionId, fromWalletId, toWalletId, amount, 
-                              TransactionType::TRANSFER, TransactionStatus::COMPLETED, description);
         
-        if (!saveTransaction(transaction)) {
+        const char* transSql = R"(
+            INSERT INTO transactions 
+            (transaction_id, from_wallet_id, to_wallet_id, amount, description, transaction_type, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?, ?);
+        )";
+        
+        sqlite3_stmt* transStmt = prepareStatement(transSql);
+        if (!transStmt) {
             rollbackTransaction();
-            return false;
+            return "";
         }
         
+        auto now = std::chrono::system_clock::now();
+        
+        sqlite3_bind_text(transStmt, 1, transactionId.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(transStmt, 2, fromWalletId.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(transStmt, 3, toWalletId.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_double(transStmt, 4, amount);
+        sqlite3_bind_text(transStmt, 5, description.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_int(transStmt, 6, static_cast<int>(TransactionType::TRANSFER));
+        sqlite3_bind_int64(transStmt, 7, std::chrono::duration_cast<std::chrono::seconds>(
+            now.time_since_epoch()).count());
+        
+        if (!executeStatement(transStmt)) {
+            finalizeStatement(transStmt);
+            rollbackTransaction();
+            return "";
+        }
+        finalizeStatement(transStmt);
+        
         commitTransaction();
-        return true;
+        return transactionId;
         
     } catch (const std::exception& e) {
         rollbackTransaction();
-        return false;
+        return "";
     }
 }
 
 // ==================== TRANSACTION MANAGEMENT ====================
 
 bool DatabaseManager::saveTransaction(const Transaction& transaction) {
+    std::lock_guard<std::mutex> lock(dbMutex);
+    
+    // Insert the transaction directly - SQLite will handle foreign key constraints
     const char* sql = R"(
         INSERT INTO transactions 
         (transaction_id, from_wallet_id, to_wallet_id, amount, description, transaction_type, timestamp)
@@ -758,7 +761,9 @@ bool DatabaseManager::saveTransaction(const Transaction& transaction) {
     )";
     
     sqlite3_stmt* stmt = prepareStatement(sql);
-    if (!stmt) return false;
+    if (!stmt) {
+        return false;
+    }
     
     sqlite3_bind_text(stmt, 1, transaction.getId().c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt, 2, transaction.getFromWalletId().c_str(), -1, SQLITE_STATIC);

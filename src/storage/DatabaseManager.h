@@ -6,10 +6,16 @@
 #include <string>
 #include <vector>
 #include <memory>
-#include "../thread_compat.h"
 #include <chrono>
 #include <sqlite3.h>
-// #include "../../sqlite/sqlite-amalgamation-3460100/sqlite3.h"
+
+#ifdef _WIN32
+    // Windows-specific - Use custom implementation for older MinGW
+    #include "../thread_compat.h"
+#else
+    // macOS/Linux - Use standard implementation
+    #include <mutex>
+#endif
 
 enum class BackupType {
     MANUAL,     // Manual backup
@@ -174,6 +180,19 @@ public:
                        const std::string& toWalletId, 
                        double amount, 
                        const std::string& description);
+
+    /**
+     * @brief Atomic transfer between wallets (ACID compliant) with transaction ID
+     * @param fromWalletId Source wallet ID
+     * @param toWalletId Destination wallet ID
+     * @param amount Transfer amount
+     * @param description Transaction description
+     * @return Transaction ID if successful, empty string if failed
+     */
+    std::string transferPointsWithId(const std::string& fromWalletId, 
+                                    const std::string& toWalletId, 
+                                    double amount, 
+                                    const std::string& description);
 
     // ==================== TRANSACTION HISTORY ====================
     

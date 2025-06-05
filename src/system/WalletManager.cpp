@@ -315,6 +315,14 @@ std::string WalletManager::issuePointsFromMaster(const std::string& toWalletId,
             toWallet->addTransaction(transaction);
             dataManager->saveWallet(toWallet);
             
+            // Lưu giao dịch vào bảng transactions trong database
+            std::cout << "[DEBUG] issuePointsFromMaster: Saving transaction with IDs: from=" 
+                      << transaction.getFromWalletId() << " to=" << transaction.getToWalletId() << std::endl;
+            
+            if (!dataManager->saveTransaction(transaction)) {
+                std::cerr << "[ERROR] Failed to save issuePointsFromMaster transaction to database!" << std::endl;
+            }
+            
             logTransaction(transaction, "COMPLETED", "Admin issued points successfully");
             return transactionId;
         }
@@ -451,56 +459,53 @@ std::string WalletManager::executeAtomicTransfer(std::shared_ptr<Wallet> fromWal
                                                double amount,
                                                const std::string& description) {
     try {
-        // Tạo ID giao dịch
-        std::string transactionId = SecurityUtils::generateUUID();
-
-        // Backup số dư trước khi thực hiện (reserved for rollback functionality)
-        // double fromBalanceBackup = fromWallet->getBalance();
-        // double toBalanceBackup = toWallet->getBalance();
-
-        // Thực hiện giao dịch
-        bool withdrawSuccess = fromWallet->withdraw(amount);
-        if (!withdrawSuccess) {
-            return "";
-        }
-
-        bool depositSuccess = toWallet->deposit(amount);
-        if (!depositSuccess) {
-            // Rollback withdrawal
-            fromWallet->deposit(amount);
-            return "";
-        }
-
-        // Tạo giao dịch cho ví gửi (trừ tiền)
-        Transaction fromTransaction(
-            transactionId,
-            fromWallet->getId(),
-            toWallet->getId(),
-            amount,
-            TransactionType::TRANSFER,
-            TransactionStatus::COMPLETED,
+        // Use database-level atomic transfer instead of application-level
+        // This ensures the entire process (balance updates + transaction logging) 
+        // happens within a single database transaction
+        std::string transactionId = dataManager->transferPointsWithId(
+            fromWallet->getId(), 
+            toWallet->getId(), 
+            amount, 
             description
         );
-
-        // Tạo giao dịch cho ví nhận (cộng tiền)
-        Transaction toTransaction(
-            transactionId,
-            fromWallet->getId(),
-            toWallet->getId(),
-            amount,
-            TransactionType::TRANSFER,
-            TransactionStatus::COMPLETED,
-            description
-        );
-
-        // Thêm giao dịch vào lịch sử
-        fromWallet->addTransaction(fromTransaction);
-        toWallet->addTransaction(toTransaction);
-
-        // Log giao dịch
-        logTransaction(fromTransaction, "COMPLETED", "Transfer executed successfully");
-
-        return transactionId;
+        
+        if (!transactionId.empty()) {
+            // Update wallet objects in memory to sync with database
+            fromWallet->withdraw(amount);
+            toWallet->deposit(amount);
+            
+            // Create transaction objects to add to wallet history (using same transaction ID)
+            Transaction fromTransaction(
+                transactionId,
+                fromWallet->getId(),
+                toWallet->getId(),
+                amount,
+                TransactionType::TRANSFER,
+                TransactionStatus::COMPLETED,
+                description
+            );
+            
+            Transaction toTransaction(
+                transactionId,
+                fromWallet->getId(),
+                toWallet->getId(),
+                amount,
+                TransactionType::TRANSFER,
+                TransactionStatus::COMPLETED,
+                description
+            );
+            
+            // Add to wallet history
+            fromWallet->addTransaction(fromTransaction);
+            toWallet->addTransaction(toTransaction);
+            
+            // Log transaction
+            logTransaction(fromTransaction, "COMPLETED", "Transfer executed successfully");
+            
+            return transactionId;
+        } else {
+            return "";
+        }
     }
     catch (const std::exception& e) {
         std::cerr << "Loi thuc hien giao dich atomic: " << e.what() << std::endl;
