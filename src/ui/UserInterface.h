@@ -294,20 +294,7 @@ private:
     /**
      * @brief Show separator
      */
-    void showSeparator();    /**
-     * @brief Validate email
-     * @param email Email to check
-     * @return true if email is valid
-     */
-    bool isValidEmail(const std::string& email);
-
-    /**
-     * @brief Validate phone number
-     * @param phone Phone number to check
-     * @return true if phone number is valid
-     */
-    bool isValidPhoneNumber(const std::string& phone);
-
+    void showSeparator();    
     /**
      * @brief Format currency display
      * @param amount Amount
@@ -353,6 +340,10 @@ private:
      * @return User's choice (1-based index)
      */
     int showMenuSelection(const std::string& title, const std::vector<std::string>& options);
+
+    // Helper template to reduce duplicate input-validation code
+    template<typename Validator>
+    std::string getValidatedInput(const std::string& prompt, Validator validator, const std::string& errorMsg = "", bool isSensitive = false, int maxAttempts = 3);
 };
 
 #endif // USER_INTERFACE_H
