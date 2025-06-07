@@ -148,6 +148,13 @@ void UserInterface::showAdminMenu() {
       auto user = authSystem.getCurrentUser();
     std::cout << "Hello Administrator " << user->getFullName() << "!\n\n";
 
+    // Check if password change is required
+    if (user->requirePasswordChange()) {
+        showInfo("Warning: You need to change your password before using the system!");
+        changePassword();
+        return;
+    }
+
     std::cout << "+--------------------------------------------------+\n";
     std::cout << "|                 ADMIN MENU                       |\n";
     std::cout << "+--------------------------------------------------+\n";

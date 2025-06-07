@@ -91,6 +91,7 @@ RegistrationResult AuthSystem::registerUser(const std::string& username,
         // Generate wallet ID
         std::string walletId = SecurityUtils::generateUUID();
         user->setWalletId(walletId);
+        user->setRequirePasswordChange(false); // Mark as needing password change on first login
 
         // FIRST: Save user to database (required for foreign key constraint)
         if (!dataManager->saveUser(user)) {
