@@ -37,10 +37,10 @@ Một hệ thống quản lý điểm thưởng an toàn dựa trên SQLite đư
 
 | STT | Họ tên | MSSV | Công việc được giao |
 |-----|--------|------|-------------------|
-| 1 | [Trịnh Xuân Dũng] | [K24DTCN579] | **Kiến trúc Hệ thống & Bảo mật**: Thiết kế kiến trúc hệ thống, triển khai SecurityUtils, hệ thống OTP |
+| 1 | [Trịnh Xuân Dũng] | [K24DTCN579] | **Kiến trúc Hệ thống & Bảo mật & Quản lý Dữ liệu &**: Thiết kế kiến trúc hệ thống, triển khai SecurityUtils, hệ thống OTP, Triển khai DatabaseManager |
 | 2 | [Ngô Thị Hồng Nhung] | [K24DTCN619] | **Quản lý Người dùng**: Triển khai lớp User, AuthSystem, xác thực người dùng |
 | 3 | [Nguyễn Minh Tâm] | [MSSV] | **Hệ thống Ví**: Triển khai lớp Wallet, WalletManager, xử lý giao dịch |
-| 4 | [Triệu Đức Hoàng] | [K24DTCN598] | **Quản lý Dữ liệu & Giao diện**: Triển khai DatabaseManager, UserInterface, hệ thống sao lưu |
+| 4 | [Triệu Đức Hoàng] | [K24DTCN598] | **Giao diện**: UserInterface, hệ thống sao lưu |
 
 ## ✨ Tính năng hiện tại
 
