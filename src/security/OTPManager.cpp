@@ -1,9 +1,3 @@
-/**
- * @file OTPManager.cpp
- * @brief Implementation of OTPManager
- * @author Team 2C
- */
-
 #include "OTPManager.h"
 #include "SecurityUtils.h"
 #include <iostream>
@@ -12,7 +6,7 @@
 /**
  * @brief Constructor
  */
-OTPManager::OTPManager() : securityUtils(nullptr) {
+OTPManager::OTPManager() {
     SecurityUtils::initialize();
 }
 
@@ -30,6 +24,9 @@ std::string OTPManager::generateOTP(const std::string& userId, OTPType type) {
             break;
         case OTPType::TRANSFER:
             purpose = "transfer";
+            break;
+        case OTPType::PASSWORD_CHANGE:
+            purpose = "password_change";
             break;
         default:
             purpose = "general";
@@ -65,6 +62,9 @@ bool OTPManager::verifyOTP(const std::string& userId,
             break;
         case OTPType::TRANSFER:
             purpose = "transfer";
+            break;
+        case OTPType::PASSWORD_CHANGE:
+            purpose = "password_change";
             break;
         default:
             purpose = "general";
@@ -138,6 +138,35 @@ bool OTPManager::verifyTransferOTP(const std::string& userId,
 }
 
 /**
+ * @brief Tạo OTP cho thay đổi mật khẩu
+ * @param userId ID người dùng
+ * @return Mã OTP
+ */
+std::string OTPManager::generatePasswordChangeOTP(const std::string& userId) {
+    std::string otp = SecurityUtils::generateOTP(userId, "password_change");
+    
+    // Simulate sending OTP (in reality would be sent via email/SMS)
+    std::cout << "\n=== OTP CODE FOR PASSWORD CHANGE ===\n";
+    std::cout << "OTP code for password change: " << otp << "\n";
+    std::cout << "This code is valid for 5 minutes.\n";
+    std::cout << "For security, this would normally be sent to your registered email/SMS.\n";
+    std::cout << "====================================\n\n";
+    
+    return otp;
+}
+
+/**
+ * @brief Xác thực OTP thay đổi mật khẩu
+ * @param userId ID người dùng
+ * @param otpCode Mã OTP
+ * @return true nếu hợp lệ
+ */
+bool OTPManager::verifyPasswordChangeOTP(const std::string& userId,
+                                        const std::string& otpCode) {
+    return SecurityUtils::verifyOTP(userId, otpCode, "password_change");
+}
+
+/**
  * @brief Mô phỏng gửi OTP qua email/SMS
  * @param userId ID người dùng
  * @param otpCode Mã OTP
@@ -148,7 +177,9 @@ void OTPManager::sendOTP(const std::string& userId,
                         const std::string& otpCode,
                         const std::string& purpose,
                         const std::string& contactInfo) {
-      std::cout << "\n=== OTP SEND NOTIFICATION ===\n";
+    (void)otpCode; // Suppress unused parameter warning - in real implementation this would be sent
+    
+    std::cout << "\n=== OTP SEND NOTIFICATION ===\n";
     std::cout << "OTP code sent to: " << contactInfo << "\n";
     std::cout << "Purpose: " << purpose << "\n";
     std::cout << "User ID: " << userId << "\n";

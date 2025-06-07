@@ -1,19 +1,15 @@
-/**
- * @file SecurityUtils.cpp
- * @brief Implementation of security utilities
- * @author Team 2C
- */
-
 #include "SecurityUtils.h"
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
+#include "picosha2.h"
+#include "../storage/OTPStorage.h"
 #include <functional>  // For std::hash
 // Removed OpenSSL includes for simple compilation
 
 // Initialize static members
 std::mt19937 SecurityUtils::rng;
-std::unordered_map<std::string, std::pair<std::string, std::chrono::system_clock::time_point>> SecurityUtils::otpStore;
+// std::unordered_map<std::string, std::pair<std::string, std::chrono::system_clock::time_point>> SecurityUtils::otpStore;
 const int SecurityUtils::OTP_VALIDITY_MINUTES;
 
 void SecurityUtils::initialize() {
@@ -73,43 +69,23 @@ std::string SecurityUtils::generatePassword(int length, bool includeSpecialChars
 }
 
 std::string SecurityUtils::generateOTP(const std::string& userId, const std::string& purpose) {
-    // Generate 6-digit OTP
     std::uniform_int_distribution<> dist(100000, 999999);
     std::string otp = std::to_string(dist(rng));
-    
-    // Store OTP with expiration time
-    auto expiry = std::chrono::system_clock::now() + 
-                  std::chrono::minutes(OTP_VALIDITY_MINUTES);
-    
-    std::string key = userId + "_" + purpose;
-    otpStore[key] = {otp, expiry};
-    
+    OTPStorage::saveOTP(userId, purpose, otp, OTP_VALIDITY_MINUTES * 60);
     return otp;
 }
 
 bool SecurityUtils::verifyOTP(const std::string& userId, const std::string& otpCode, const std::string& purpose) {
-    std::string key = userId + "_" + purpose;
-    
-    auto it = otpStore.find(key);
-    if (it == otpStore.end()) {
-        return false;
+    std::string correctOTP = OTPStorage::getOTP(userId, purpose);
+    if (!correctOTP.empty() && correctOTP == otpCode) {
+        OTPStorage::removeOTP(userId, purpose);
+        return true;
     }
-    
-    // Check expiration time
-    auto now = std::chrono::system_clock::now();
-    if (now > it->second.second) {
-        otpStore.erase(it);
-        return false;
-    }
-      // Check OTP code
-    bool valid = (it->second.first == otpCode);
-    
-    // Delete OTP after use (one-time)
-    if (valid) {
-        otpStore.erase(it);
-    }
-    
-    return valid;
+    return false;
+}
+
+void SecurityUtils::cleanupExpiredOTP() {
+    OTPStorage::cleanupExpiredOTP();
 }
 
 std::string SecurityUtils::generateUUID() {
@@ -194,33 +170,8 @@ std::string SecurityUtils::decrypt(const std::string& encryptedData, const std::
     return decrypted;
 }
 
-void SecurityUtils::cleanupExpiredOTP() {
-    auto now = std::chrono::system_clock::now();
-    
-    for (auto it = otpStore.begin(); it != otpStore.end();) {
-        if (now > it->second.second) {
-            it = otpStore.erase(it);
-        } else {
-            ++it;
-        }
-    }
-}
-
 std::string SecurityUtils::sha256(const std::string& input) {
-    // Simple hash using std::hash (not cryptographically secure, for demo only)
-    std::hash<std::string> hasher;
-    size_t hashValue = hasher(input);
-    
-    // Convert to hex string
-    std::ostringstream ss;
-    ss << std::hex << hashValue;
-    
-    // Pad with zeros and extend to make it look like a proper hash
-    std::string result = ss.str();
-    while(result.length() < 64) {  // SHA256 is 64 hex chars
-        result = "0" + result;
-    }
-    return result;
+    return picosha2::hash256_hex_string(input);
 }
 
 std::string SecurityUtils::bytesToHex(const unsigned char* bytes, size_t length) {

@@ -13,7 +13,6 @@ User::User(const std::string& id, const std::string& username, const std::string
       isFirstLogin(true), createdAt(std::chrono::system_clock::now()),
       lastLogin(std::chrono::system_clock::now()) {
     
-    // We'll set the wallet ID separately to ensure consistency
     walletId = "";
 }
 
@@ -59,7 +58,6 @@ std::unique_ptr<User> User::fromJson(const std::string& json) {
         // Simple JSON parser - find necessary fields
         auto user = std::unique_ptr<User>(new User());
         
-        // Helper function to extract string value from JSON
         auto extractString = [&json](const std::string& key) -> std::string {
             std::string searchKey = "\"" + key + "\": \"";
             size_t start = json.find(searchKey);
@@ -69,7 +67,6 @@ std::unique_ptr<User> User::fromJson(const std::string& json) {
             if (end == std::string::npos) return "";
             return json.substr(start, end - start);        };
         
-        // Helper function to extract int/bool value from JSON
         auto extractValue = [&json](const std::string& key) -> std::string {
             std::string searchKey = "\"" + key + "\": ";
             size_t start = json.find(searchKey);

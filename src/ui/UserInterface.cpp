@@ -4,9 +4,13 @@
 #include <iomanip>
 #include <sstream>
 #include <regex>
-#include <conio.h>  // For Windows
-// #include <termios.h>  // For macOS/Linux
+#include <ctime> // For localtime_s and localtime_r
+#ifdef _WIN32
+#include <conio.h>  // For Windows getch()
+#else
+#include <termios.h>  // For macOS/Linux
 #include <unistd.h>
+#endif
 // #include <sys/ioctl.h>
 #include <limits>
 #include <algorithm>
@@ -14,12 +18,15 @@
 #include "UserValidator.h"
 #include <variant>
 
-#ifndef _WIN32 //for mac
+#ifdef _WIN32
+// Windows version uses conio.h getch() directly - no need to redefine
+#else
+// macOS/Linux version
 int getch() {
     struct termios oldattr, newattr;
     int ch;
     tcgetattr(STDIN_FILENO, &oldattr);
-    newattr = oldattr;
+        newattr = oldattr;
     newattr.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &newattr);
     ch = getchar();
@@ -28,10 +35,10 @@ int getch() {
 }
 #endif
 
-UserInterface::UserInterface(AuthSystem& authSys) 
+UserInterface::UserInterface(AuthSystem& authSys)
     : authSystem(authSys), isRunning(false) {
-    // Initialize WalletManager
-    auto dataManager = std::make_shared<DataManager>();
+    // Initialize WalletManager using the DatabaseManager from AuthSystem
+    auto dataManager = authSystem.getDataManager();
     auto otpManager = std::make_shared<OTPManager>();
     walletManager = std::unique_ptr<WalletManager>(new WalletManager(dataManager, otpManager));
 }
@@ -41,30 +48,24 @@ UserInterface::~UserInterface() {
 }
 
 void UserInterface::run() {
-    std::cout << "[DEBUG] Starting UserInterface::run()" << std::endl;
-    
     // Initialize system
     if (!authSystem.initialize()) {
         showError("Cannot initialize authentication system!");
         return;
     }
-    std::cout << "[DEBUG] AuthSystem initialized successfully" << std::endl;
 
     if (!walletManager->initialize()) {
         showError("Cannot initialize wallet system!");
         return;
     }
-    std::cout << "[DEBUG] WalletManager initialized successfully" << std::endl;
 
     isRunning = true;
     clearScreen();
     showHeader();
     showSuccess("System is ready!");
 
-    std::cout << "[DEBUG] Starting main loop..." << std::endl;
     while (isRunning) {
         try {
-            std::cout << "[DEBUG] Loop iteration - isLoggedIn: " << authSystem.isLoggedIn() << std::endl;
             if (!authSystem.isLoggedIn()) {
                 showMainMenu();
             } else {
@@ -80,20 +81,32 @@ void UserInterface::run() {
             pauseScreen();
         }
     }
-    std::cout << "[DEBUG] Exiting main loop" << std::endl;
 }
 
 // ==================== MENU FUNCTIONS ====================
 
 void UserInterface::showMainMenu() {
     clearScreen();
-    showHeader();    std::cout << "+--------------------------------------------------+\n";
+    showHeader();
+
+    // Check if system has any admin users
+    bool hasAdmin = authSystem.hasAnyAdmin();
+    
+    std::cout << "+--------------------------------------------------+\n";
     std::cout << "|                   MAIN MENU                      |\n";
     std::cout << "+--------------------------------------------------+\n";
     std::cout << "|  1. Login                                        |\n";
     std::cout << "|  2. Register new account                         |\n";
     std::cout << "|  3. Exit program                                 |\n";
-    std::cout << "+--------------------------------------------------+\n\n";
+    std::cout << "+--------------------------------------------------+\n";
+    
+    if (!hasAdmin) {
+        std::cout << "\n";
+        showInfo("NOTICE: No admin accounts exist.");
+        showInfo("The first registered user will become an administrator.");
+        std::cout << "\n";
+    }
+    std::cout << "\n";
 
     int choice = getIntInput("Choose function: ", 1, 3);
     handleMainMenu(choice);
@@ -240,9 +253,22 @@ void UserInterface::loginScreen() {
 void UserInterface::registerScreen() {
     clearScreen();
     showHeader();
+    
+    // Check if this will be the first admin
+    bool willBeFirstAdmin = !authSystem.hasAnyAdmin();
+    
     std::cout << "+--------------------------------------------------+\n";
     std::cout << "|                  REGISTER                        |\n";
-    std::cout << "+--------------------------------------------------+\n\n";
+    std::cout << "+--------------------------------------------------+\n";
+    
+    if (willBeFirstAdmin) {
+        std::cout << "\n";
+        showInfo("FIRST ADMIN REGISTRATION");
+        showInfo("This will be the first admin account in the system.");
+        std::cout << "\n";
+    }
+    
+    std::cout << "\n";
 
     // Validate username
     std::string username = getValidatedInput(
@@ -329,7 +355,7 @@ void UserInterface::logout() {
 void UserInterface::viewProfile() {
     clearScreen();
     showHeader();
-      std::cout << "+--------------------------------------------------+\n";
+    std::cout << "+--------------------------------------------------+\n";
     std::cout << "|                PERSONAL INFORMATION              |\n";
     std::cout << "+--------------------------------------------------+\n\n";
 
@@ -346,6 +372,8 @@ void UserInterface::changePassword() {
     std::cout << "+--------------------------------------------------+\n";
     std::cout << "|                CHANGE PASSWORD                   |\n";
     std::cout << "+--------------------------------------------------+\n\n";
+    
+    auto user = authSystem.getCurrentUser();
     
     std::string oldPassword = getPassword("Current password: ");
     std::string newPassword;
@@ -371,11 +399,37 @@ void UserInterface::changePassword() {
         return;
     }
     
+    // Generate OTP for password change
+    showInfo("Generating OTP code for password change...");
+    std::string otpCode = authSystem.requestPasswordChangeOTP(user->getId());
+    if (otpCode.empty()) {
+        showError("Cannot generate OTP code!");
+        pauseScreen();
+        return;
+    }
+
+    showInfo("Your OTP code is: " + otpCode);
+    showInfo("(In reality, this code would be sent via email/SMS)");
+    
+    // Confirm password change details
+    std::cout << "\n" << "=== CONFIRM PASSWORD CHANGE ===\n";
+    std::cout << "User: " << user->getFullName() << "\n";
+    std::cout << "Action: Change password\n\n";
+    
+    if (!confirmAction("Are you sure you want to change your password?")) {
+        showInfo("Password change cancelled!");
+        pauseScreen();
+        return;
+    }
+    
+    std::string inputOTP = getInput("Enter OTP code: ");
+    if (inputOTP.empty()) return;
+    
     showInfo("Updating password...");
-    if (authSystem.changePassword(authSystem.getCurrentUser()->getId(), oldPassword, newPassword)) {
+    if (authSystem.changePasswordWithOTP(user->getId(), oldPassword, newPassword, inputOTP)) {
         showSuccess("Password changed successfully!");
     } else {
-        showError("Password change failed! Please check your old password.");
+        showError("Password change failed! Please check your old password and OTP code.");
     }
 
 
@@ -453,7 +507,7 @@ void UserInterface::updateProfile() {
 void UserInterface::viewWalletBalance() {
     clearScreen();
     showHeader();
-      std::cout << "+--------------------------------------------------+\n";
+    std::cout << "+--------------------------------------------------+\n";
     std::cout << "|                 WALLET BALANCE                   |\n";
     std::cout << "+--------------------------------------------------+\n\n";
 
@@ -477,7 +531,7 @@ void UserInterface::viewWalletBalance() {
 void UserInterface::transferPoints() {
     clearScreen();
     showHeader();
-      std::cout << "+--------------------------------------------------+\n";
+    std::cout << "+--------------------------------------------------+\n";
     std::cout << "|                TRANSFER POINTS                   |\n";
     std::cout << "+--------------------------------------------------+\n\n";
 
@@ -488,13 +542,13 @@ void UserInterface::transferPoints() {
         showError("Your wallet is not available!");
         pauseScreen();
         return;
-    }
-
-    std::cout << "Current balance: " << formatCurrency(fromWallet->getBalance()) << "\n\n";
+    }    std::cout << "Current balance: " << formatCurrency(fromWallet->getBalance()) << "\n\n";
 
     // Enter recipient information
     std::string recipientUsername = getInput("Recipient username: ");
-    if (recipientUsername.empty()) return;    auto recipient = authSystem.findUserByUsername(recipientUsername);
+    if (recipientUsername.empty()) return;
+    
+    auto recipient = authSystem.findUserByUsername(recipientUsername);
     if (!recipient) {
         showError("User not found!");
         pauseScreen();
@@ -508,11 +562,24 @@ void UserInterface::transferPoints() {
         return;
     }
 
-    std::cout << "Recipient: " << recipient->getFullName() << "\n\n";
+    std::cout << "Recipient: " << recipient->getFullName() << "\n";
+    std::cout << "Your current balance: " << formatCurrency(fromWallet->getBalance()) << "\n\n";
 
-    // Enter transfer amount
-    double amount = getDoubleInput("Amount to transfer: ", 0.01, fromWallet->getBalance());
-    if (amount <= 0) return;    // Enter description
+    // Enter transfer amount with cancel option
+    bool cancelled = false;
+    double amount = getDoubleInputWithCancel("Amount to transfer: ", 0.01, fromWallet->getBalance(), cancelled);
+    
+    if (cancelled) {
+        showInfo("Transfer cancelled. Returning to menu...");
+        pauseScreen();
+        return;
+    }
+    
+    if (amount <= 0) {
+        showError("Invalid amount!");
+        pauseScreen();
+        return;
+    }    // Enter description
     std::string description = getInput("Transaction description: ");
     if (description.empty()) description = "Transfer points";
 
@@ -578,10 +645,10 @@ void UserInterface::viewTransactionHistory() {
         showError("Cannot find your wallet!");
         pauseScreen();
         return;
-    }
-
-    int limit = getIntInput("Number of transactions to view (0 = all): ", 0, 100);
-    if (limit == 0) limit = -1;    auto transactions = walletManager->getTransactionHistory(wallet->getId(), limit);
+    }    int limit = getIntInput("Number of transactions to view (0 = all): ", 0, 100);
+    if (limit == 0) limit = -1;
+    
+    auto transactions = walletManager->getTransactionHistory(wallet->getId(), limit);
     
     if (transactions.empty()) {
         showInfo("No transactions found!");
@@ -756,8 +823,38 @@ void UserInterface::createNewAccount() {
 }
 
 void UserInterface::manageUserAccount() {
-    showInfo("This feature is under development!");
-    pauseScreen();
+    if (!authSystem.isCurrentUserAdmin()) {
+        showError("Access denied! Admin privileges required.");
+        pauseScreen();
+        return;
+    }    while (true) {
+        clearScreen();
+        showHeader();
+        
+        std::cout << " +----------------------------------------------------------+\n";
+        std::cout << " |                 USER ACCOUNT MANAGEMENT                  |\n";
+        std::cout << " +----------------------------------------------------------+\n\n";
+        
+        std::cout << " 1. View All Users\n";
+        std::cout << " 2. Search User by Username\n";
+        std::cout << " 3. Create New Account\n";
+        std::cout << " 4. Edit User Information\n";
+        std::cout << " 5. Reset User Password\n";
+        std::cout << " 6. View User Wallet Details\n";
+        std::cout << " 0. Return to Main Menu\n\n";
+        
+        int choice = getIntInput("Choose function: ", 0, 6);
+        
+        switch (choice) {
+            case 1: viewAllUsers(); break;
+            case 2: searchUserByUsername(); break;
+            case 3: createNewUserAccount(); break;
+            case 4: editUserInformation(); break;
+            case 5: resetUserPassword(); break;
+            case 6: viewUserWalletDetails(); break;
+            case 0: return;
+        }
+    }
 }
 
 void UserInterface::viewSystemStatistics() {
@@ -780,10 +877,10 @@ void UserInterface::issuePointsFromMaster() {
     
     std::cout << "+--------------------------------------------------+\n";
     std::cout << "|         ISSUE POINTS FROM MASTER WALLET          |\n";
-    std::cout << "+--------------------------------------------------+\n\n";
-
-    std::string username = getInput("Recipient username: ");
-    if (username.empty()) return;    auto user = authSystem.findUserByUsername(username);
+    std::cout << "+--------------------------------------------------+\n\n";    std::string username = getInput("Recipient username: ");
+    if (username.empty()) return;
+    
+    auto user = authSystem.findUserByUsername(username);
     if (!user) {
         showError("User not found!");
         pauseScreen();
@@ -800,11 +897,43 @@ void UserInterface::issuePointsFromMaster() {
     std::cout << "Recipient: " << user->getFullName() << "\n";
     std::cout << "Current balance: " << formatCurrency(wallet->getBalance()) << "\n\n";
 
-    double amount = getDoubleInput("Points to issue: ", 0.01, 1000000.0);
-    if (amount <= 0) return;
+    bool cancelled = false;
+    double amount = getDoubleInputWithCancel("Points to issue: ", 0.01, 1000000.0, cancelled);
+    
+    if (cancelled) {
+        showInfo("Point issuance cancelled. Returning to menu...");
+        pauseScreen();
+        return;
+    }
+    
+    if (amount <= 0) {
+        showError("Invalid amount!");
+        pauseScreen();
+        return;
+    }
 
     std::string description = getInput("Reason for issuing: ");
     if (description.empty()) description = "Admin issued points";
+
+    // Create OTP for security
+    showInfo("Generating OTP code...");
+    auto currentUser = authSystem.getCurrentUser();
+    std::string otpCode = walletManager->generateTransferOTP(currentUser->getId(), wallet->getId(), amount);
+    if (otpCode.empty()) {
+        showError("Cannot generate OTP code!");
+        pauseScreen();
+        return;
+    }
+
+    showInfo("Your OTP code is: " + otpCode);
+    showInfo("(In reality, this code would be sent via email/SMS)");
+
+    // Confirm transaction details
+    std::cout << "\n" << "=== CONFIRM POINT ISSUANCE ===\n";
+    std::cout << "Administrator: " << currentUser->getFullName() << "\n";
+    std::cout << "Recipient: " << user->getFullName() << "\n";
+    std::cout << "Amount: " << formatCurrency(amount) << "\n";
+    std::cout << "Reason: " << description << "\n\n";
 
     if (!confirmAction("Are you sure you want to issue " + formatCurrency(amount) + " points?")) {
         showInfo("Operation cancelled!");
@@ -812,9 +941,17 @@ void UserInterface::issuePointsFromMaster() {
         return;
     }
 
+    std::string inputOTP = getInput("Enter OTP code: ");
+    if (inputOTP.empty()) {
+        showInfo("Operation cancelled!");
+        pauseScreen();
+        return;
+    }
+
     showInfo("Issuing points...");
     
-    std::string transactionId = walletManager->issuePointsFromMaster(wallet->getId(), amount, description);
+    std::string transactionId = walletManager->issuePointsFromMaster(
+        currentUser->getId(), wallet->getId(), amount, description, inputOTP);
     
     if (!transactionId.empty()) {
         showSuccess("Points issued successfully!");
@@ -884,14 +1021,14 @@ void UserInterface::createManualBackup() {
         // Get DataManager through AuthSystem
         auto dataManager = authSystem.getDataManager();
         if (dataManager) {
-            BackupInfo backupInfo = dataManager->createBackup(BackupType::MANUAL, description);
+            bool success = dataManager->createBackup(description, BackupType::MANUAL);
             
-            showSuccess("Backup created successfully!");
-            std::cout << "\nBackup Details:\n";
-            std::cout << "- Backup ID: " << backupInfo.backupId << "\n";
-            std::cout << "- Filename: " << backupInfo.filename << "\n";
-            std::cout << "- Size: " << formatFileSize(backupInfo.fileSize) << "\n";
-            std::cout << "- Created: " << formatDateTime(backupInfo.timestamp) << "\n";
+            if (success) {
+                showSuccess("Backup created successfully!");
+                std::cout << "\nBackup created with description: " << description << "\n";
+            } else {
+                showError("Failed to create backup!");
+            }
         } else {
             showError("Unable to access data manager!");
         }
@@ -1008,7 +1145,7 @@ void UserInterface::restoreFromBackup() {
         }
 
         showInfo("Creating safety backup of current data...");
-        dataManager->createBackup(BackupType::EMERGENCY, "Pre-restore backup");
+        dataManager->createBackup("Pre-restore backup", BackupType::EMERGENCY);
         
         showInfo("Restoring from backup...");
         bool success = dataManager->restoreFromBackup(selectedBackup.backupId);
@@ -1207,7 +1344,55 @@ double UserInterface::getDoubleInput(const std::string& prompt, double min, doub
         
         std::cin.clear();
         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        showError("Please enter a number from " + std::to_string(min) + " to " + std::to_string(max) + "!");
+        
+        // Better formatting for currency amounts
+        if (max < 1000000.0) {
+            showError("Please enter a number from " + formatCurrency(min) + " to " + formatCurrency(max) + "!");
+        } else {
+            showError("Please enter a number from " + std::to_string(min) + " to " + std::to_string(max) + "!");
+        }
+    }
+}
+
+double UserInterface::getDoubleInputWithCancel(const std::string& prompt, double min, double max, bool& cancelled) {
+    cancelled = false;
+    std::string input;
+    
+    while (true) {
+        std::cout << prompt;
+        std::cout << "(Enter 'c' or 'cancel' to return to menu): ";
+        
+        if (!std::getline(std::cin, input)) {
+            cancelled = true;
+            return 0.0;
+        }
+        
+        // Check for cancel commands
+        std::string lowerInput = input;
+        std::transform(lowerInput.begin(), lowerInput.end(), lowerInput.begin(), ::tolower);
+        if (lowerInput == "c" || lowerInput == "cancel" || lowerInput == "exit" || lowerInput == "back") {
+            cancelled = true;
+            return 0.0;
+        }
+        
+        // Try to parse as number
+        try {
+            double value = std::stod(input);
+            if (value >= min && value <= max) {
+                return value;
+            }
+            
+            // Better formatting for currency amounts  
+            if (max < 1000000.0) {
+                showError("Please enter a number from " + formatCurrency(min) + " to " + formatCurrency(max) + "!");
+            } else {
+                showError("Please enter a number from " + std::to_string(min) + " to " + std::to_string(max) + "!");
+            }
+        } catch (const std::exception&) {
+            showError("Please enter a valid number!");
+        }
+        
+        showInfo("Type 'c' or 'cancel' to return to the menu.");
     }
 }
 
@@ -1240,14 +1425,17 @@ void UserInterface::pauseScreen() {
 }
 
 void UserInterface::clearScreen() {
-    // system("cls"); // Windows
+#ifdef _WIN32
+    system("cls"); // Windows
+#else
     system("clear"); // Linux/Mac
+#endif
 }
 
 void UserInterface::showHeader() {
     std::cout << "+--------------------------------------------------+\n";
-    std::cout << "|        WALLET POINT MANAGEMENT SYSTEM           |\n";
-    std::cout << "|                   Team 2C                        |\n";
+    std::cout << "|        WALLET POINT MANAGEMENT SYSTEM            |\n";
+    std::cout << "|                   Team 2 C++                     |\n";
     std::cout << "+--------------------------------------------------+\n\n";
 }
 
@@ -1262,9 +1450,26 @@ std::string UserInterface::formatCurrency(double amount) {
 }
 
 std::string UserInterface::formatDateTime(const std::chrono::system_clock::time_point& timePoint) {
-    auto time_t = std::chrono::system_clock::to_time_t(timePoint);
+    auto time_t_val = std::chrono::system_clock::to_time_t(timePoint);
+    std::tm* time_info = std::localtime(&time_t_val);
     std::ostringstream oss;
-    oss << std::put_time(std::localtime(&time_t), "%d/%m/%Y %H:%M:%S");
+    if (time_info) {
+        oss << std::put_time(time_info, "%d/%m/%Y %H:%M:%S");
+    } else {
+        oss << "Invalid time";
+    }
+    return oss.str();
+}
+
+std::string UserInterface::formatDate(const std::chrono::system_clock::time_point& timePoint) {
+    auto time_t_val = std::chrono::system_clock::to_time_t(timePoint);
+    std::tm* time_info = std::localtime(&time_t_val);
+    std::ostringstream oss;
+    if (time_info) {
+        oss << std::put_time(time_info, "%d/%m/%Y");
+    } else {
+        oss << "Invalid date";
+    }
     return oss.str();
 }
 
@@ -1318,4 +1523,278 @@ int UserInterface::showMenuSelection(const std::string& title, const std::vector
     }
     
     return getIntInput("Choose: ", 1, static_cast<int>(options.size()));
+}
+
+void UserInterface::searchUserByUsername() {
+    clearScreen();
+    showHeader();
+    std::cout << " +-------------------------------------------------------------+\n";
+    std::cout << " |                   SEARCH USER                               |\n";
+    std::cout << " +-------------------------------------------------------------+\n\n";
+    
+    std::cout << " Enter username to search: ";
+    std::string username;
+    std::getline(std::cin, username);
+    
+    if (username.empty()) {
+        showError("Username cannot be empty!");
+        pauseScreen();
+        return;
+    }
+    
+    auto user = authSystem.findUserByUsername(username);
+    if (!user) {
+        showError("User not found!");
+        pauseScreen();
+        return;
+    }
+    
+    // Display user information    
+    std::cout << " +-------------------------------------------------------------+\n";
+    std::cout << " |                   USER INFORMATION                          |\n";
+    std::cout << " +-------------------------------------------------------------+\n\n";
+    
+    std::cout << " User ID      : " << user->getId() << "\n";
+    std::cout << " Username     : " << user->getUsername() << "\n";
+    std::cout << " Full Name    : " << user->getFullName() << "\n";
+    std::cout << " Email        : " << user->getEmail() << "\n";
+    std::cout << " Phone        : " << user->getPhoneNumber() << "\n";
+    std::cout << " Role         : " << (user->getRole() == UserRole::ADMIN ? "Admin" : "Regular") << "\n";
+    std::cout << " Wallet ID    : " << user->getWalletId() << "\n";
+    std::cout << " Status       : " << (user->isActive() ? "Active" : "Inactive") << "\n";
+    
+    pauseScreen();
+}
+
+void UserInterface::createNewUserAccount() {
+    clearScreen();
+    showHeader();
+    std::cout << " +-------------------------------------------------------------+\n";
+    std::cout << " |                CREATE NEW ACCOUNT                           |\n";
+    std::cout << " +-------------------------------------------------------------+\n\n";
+    
+    std::string username, fullName, email, phoneNumber;
+    UserRole role = UserRole::REGULAR;
+    
+    std::cout << " Enter username: ";
+    std::getline(std::cin, username);
+    
+    std::cout << " Enter full name: ";
+    std::getline(std::cin, fullName);
+    
+    std::cout << " Enter email: ";
+    std::getline(std::cin, email);
+    
+    std::cout << " Enter phone number: ";
+    std::getline(std::cin, phoneNumber);
+    
+    std::cout << "\n Select user role:\n";
+    std::cout << " 1. Regular User\n";
+    std::cout << " 2. Admin\n";
+    std::cout << " Choice: ";
+    
+    int roleChoice = getIntInput("Choose: ", 1, 2);
+    if (roleChoice == 2) {
+        role = UserRole::ADMIN;
+    }
+    
+    // Create account with auto-generated password
+    auto result = authSystem.createAccount(username, fullName, email, phoneNumber, role, true);
+    
+    if (result.success) {
+        showSuccess(result.message);
+        if (!result.generatedPassword.empty()) {
+            std::cout << "\n Generated password: " << result.generatedPassword << "\n";
+            std::cout << " Please save this password securely!\n";
+        }
+    } else {
+        showError(result.message);
+    }
+    
+    pauseScreen();
+}
+
+void UserInterface::editUserInformation() {
+    clearScreen();
+    showHeader();
+    std::cout << " +-------------------------------------------------------------+\n";
+    std::cout << " |                 EDIT USER INFORMATION                       |\n";
+    std::cout << " +-------------------------------------------------------------+\n\n";
+    
+    std::cout << " Enter username to edit: ";
+    std::string username;
+    std::getline(std::cin, username);
+    
+    auto user = authSystem.findUserByUsername(username);
+    if (!user) {
+        showError("User not found!");
+        pauseScreen();
+        return;
+    }
+    
+    // Show current information
+    std::cout << "\n Current Information:\n";
+    std::cout << " Full Name: " << user->getFullName() << "\n";
+    std::cout << " Email    : " << user->getEmail() << "\n";
+    std::cout << " Phone    : " << user->getPhoneNumber() << "\n\n";
+    
+    std::cout << " What would you like to edit?\n";
+    std::cout << " 1. Full Name\n";
+    std::cout << " 2. Email\n";
+    std::cout << " 3. Phone Number\n";
+    std::cout << " 0. Cancel\n";
+    std::cout << " Choice: ";
+    
+    int choice = getIntInput("Choose: ", 0, 3);
+    
+    switch (choice) {
+        case 1: {
+            std::cout << "\n Enter new full name: ";
+            std::string newName;
+            std::getline(std::cin, newName);
+            if (!newName.empty()) {
+                user->setFullName(newName);
+            }
+            break;
+        }
+        case 2: {
+            std::cout << "\n Enter new email: ";
+            std::string newEmail;
+            std::getline(std::cin, newEmail);
+            if (!newEmail.empty()) {
+                user->setEmail(newEmail);
+            }
+            break;
+        }
+        case 3: {
+            std::cout << "\n Enter new phone number: ";
+            std::string newPhone;
+            std::getline(std::cin, newPhone);
+            if (!newPhone.empty()) {
+                user->setPhoneNumber(newPhone);
+            }
+            break;
+        }
+        case 0:
+            return;
+    }
+    
+    if (choice >= 1 && choice <= 3) {
+        if (authSystem.saveUser(user)) {
+            showSuccess("User information updated successfully!");
+        } else {
+            showError("Failed to update user information!");
+        }
+    }
+    
+    pauseScreen();
+}
+
+void UserInterface::resetUserPassword() {
+    clearScreen();
+    showHeader();
+    std::cout << " +-------------------------------------------------------------+\n";
+    std::cout << " |                 RESET USER PASSWORD                         |\n";
+    std::cout << " +-------------------------------------------------------------+\n\n";
+    
+    std::cout << " Enter username to reset password: ";
+    std::string username;
+    std::getline(std::cin, username);
+    
+    auto user = authSystem.findUserByUsername(username);
+    if (!user) {
+        showError("User not found!");
+        pauseScreen();
+        return;
+    }
+    
+    std::cout << "\n Reset password for user: " << user->getFullName() << "\n";
+    std::cout << " 1. Generate random password\n";
+    std::cout << " 2. Set default password (123456789)\n";
+    std::cout << " 0. Cancel\n";
+    std::cout << " Choice: ";
+    
+    int choice = getIntInput("Choose: ", 0, 2);
+    
+    std::string newPassword;
+    switch (choice) {
+        case 1:
+            newPassword = SecurityUtils::generateRandomString(12);
+            break;
+        case 2:
+            newPassword = "123456789";
+            break;
+        case 0:
+            return;
+    }
+    
+    // Hash and set new password
+    user->setPasswordHash(SecurityUtils::hashPassword(newPassword));
+    user->setRequirePasswordChange(true);
+    
+    if (authSystem.saveUser(user)) {
+        showSuccess("Password reset successfully!");
+        std::cout << "\n New password: " << newPassword << "\n";
+        std::cout << " User will be required to change password on next login.\n";
+    } else {
+        showError("Failed to reset password!");
+    }
+    
+    pauseScreen();
+}
+
+void UserInterface::viewUserWalletDetails() {
+    clearScreen();
+    showHeader();
+    std::cout << " +-------------------------------------------------------------+\n";
+    std::cout << " |                USER WALLET DETAILS                          |\n";
+    std::cout << " +-------------------------------------------------------------+\n\n";
+    
+    std::cout << " Enter username to view wallet: ";
+    std::string username;
+    std::getline(std::cin, username);
+    
+    auto user = authSystem.findUserByUsername(username);
+    if (!user) {
+        showError("User not found!");
+        pauseScreen();
+        return;
+    }
+    
+    // Get wallet information
+    auto wallet = walletManager->getWalletByUserId(user->getId());
+    if (!wallet) {
+        showError("User's wallet not found!");
+        pauseScreen();
+        return;
+    }
+    std::cout << " +-------------------------------------------------------------+\n";
+    std::cout << " |                   WALLET INFORMATION                        |\n";
+    std::cout << " +-------------------------------------------------------------+\n\n";
+    
+    std::cout << " User         : " << user->getFullName() << " (" << user->getUsername() << ")\n";
+    std::cout << " Wallet ID    : " << wallet->getId() << "\n";
+    std::cout << " Balance      : " << std::fixed << std::setprecision(2) << wallet->getBalance() << " points\n";
+    std::cout << " Created      : " << formatDateTime(wallet->getCreatedAt()) << "\n";
+    
+    // Show recent transactions
+    auto transactions = wallet->getTransactionHistory();
+    if (!transactions.empty()) {
+        std::cout << "\n Recent Transactions (last 5):\n";
+        std::cout << " +----------+--------------+----------+---------------------+\n";        
+        std::cout << " |   Date   |     Type     |  Amount  |    Description      |\n";
+        std::cout << " +----------+--------------+----------+---------------------+\n";
+        
+        int count = 0;
+        for (auto it = transactions.rbegin(); it != transactions.rend() && count < 5; ++it, ++count) {
+            const auto& tx = *it;
+            std::string typeStr = (tx.getType() == TransactionType::TRANSFER) ? "Transfer" : "Other";            std::cout << " | " << std::setw(8) << formatDate(tx.getTimestamp()) 
+                      << " | " << std::setw(12) << typeStr
+                      << " | " << std::setw(8) << std::fixed << std::setprecision(2) << tx.getAmount()
+                      << " | " << std::setw(19) << tx.getDescription().substr(0, 19) << " |\n";
+        }
+        std::cout << " +----------+--------------+----------+---------------------+\n";
+    }
+    
+    pauseScreen();
 }

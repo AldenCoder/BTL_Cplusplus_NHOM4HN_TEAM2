@@ -7,11 +7,11 @@
 #include <memory>
 
 enum class TransactionType {
-    TRANSFER_IN,    // Receive points
-    TRANSFER_OUT,   // Send points
-    TRANSFER,       // General transfer transaction
-    INITIAL,        // Initial points from master wallet
-    ROLLBACK        // Transaction rollback
+    TRANSFER_IN,    // Receive points 0
+    TRANSFER_OUT,   // Send points 1
+    TRANSFER,       // General transfer transaction 2
+    INITIAL,        // Initial points from master wallet 3
+    ROLLBACK        // Transaction rollback 4
 };
 
 enum class TransactionStatus {
@@ -67,16 +67,6 @@ struct Transaction {
     static Transaction fromJson(const std::string& json);
 };
 
-/**
- * @class Wallet
- * @brief Reward points wallet management class
- * 
- * Each user has a wallet with the following features:
- * - Store points balance
- * - Execute point transfer transactions
- * - Store transaction history
- * - Verify transactions with OTP
- */
 class Wallet {
 protected:  // Changed from private to protected for inheritance
     std::string walletId;              // Unique wallet ID
@@ -105,6 +95,7 @@ public:
     std::vector<Transaction> getTransactionHistory() const { return transactions; } // Overload without parameters
     bool getIsLocked() const { return isLocked; }
     bool isLockedStatus() const { return isLocked; } // Alias for getIsLocked
+    const std::chrono::system_clock::time_point& getCreatedAt() const { return createdAt; }
 
     /**
      * @brief Check if balance is sufficient for transaction

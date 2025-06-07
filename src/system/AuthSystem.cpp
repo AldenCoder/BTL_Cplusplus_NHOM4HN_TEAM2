@@ -1,20 +1,16 @@
-/**
- * @file AuthSystem.cpp
- * @brief Implementation of authentication system and user management
- * @author Team 2C
- */
-
 #include "AuthSystem.h"
 #include "../security/OTPManager.h"
+#include "WalletManager.h"
 #include <iostream>
 #include <algorithm>
 #include <regex>
 
 AuthSystem::AuthSystem() 
-    : isInitialized(false), currentUser(nullptr) {
+    : currentUser(nullptr), isInitialized(false) {
     // Initialize components
-    dataManager = std::make_shared<DataManager>();
+    dataManager = std::make_shared<DatabaseManager>();
     otpManager = std::make_shared<OTPManager>();
+    walletManager = std::make_shared<WalletManager>(dataManager, otpManager);
 }
 
 AuthSystem::~AuthSystem() {
@@ -26,12 +22,17 @@ AuthSystem::~AuthSystem() {
 bool AuthSystem::initialize() {
     try {
         if (!dataManager->initialize()) {
-            std::cerr << "Error: Cannot initialize DataManager" << std::endl;
+            std::cerr << "Error: Cannot initialize DatabaseManager" << std::endl;
             return false;
         }
 
-        // Create default admin if not exists
-        createDefaultAdmin();
+        if (!walletManager->initialize()) {
+            std::cerr << "Error: Cannot initialize WalletManager" << std::endl;
+            return false;
+        }
+
+        // Note: No longer auto-creating default admin
+        // Database starts empty - admin must be created manually
         
         isInitialized = true;
         return true;
@@ -65,8 +66,16 @@ RegistrationResult AuthSystem::registerUser(const std::string& username,
     if (password.length() < 8) {
         result.message = "Password must be at least 8 characters!";
         return result;
-    }    try {        // Generate a unique user ID
+    }    try {
+        // Generate a unique user ID
         std::string userId = SecurityUtils::generateUUID();
+        
+        // Determine user role: if no admin exists, make this user an admin
+        UserRole userRole = UserRole::REGULAR;
+        if (!hasAnyAdmin()) {
+            userRole = UserRole::ADMIN;
+            std::cout << "No admin users found. Creating first admin account..." << std::endl;
+        }
         
         // Create new user with this ID
         auto user = std::make_shared<User>(
@@ -75,26 +84,37 @@ RegistrationResult AuthSystem::registerUser(const std::string& username,
             SecurityUtils::hashPassword(password),
             fullName,
             email,
-            phoneNumber,        UserRole::REGULAR
+            phoneNumber,
+            userRole
         );
 
-        // Create default wallet with a unique wallet ID
+        // Generate wallet ID
         std::string walletId = SecurityUtils::generateUUID();
-        auto wallet = std::make_shared<Wallet>(walletId, userId, 0.0);
         user->setWalletId(walletId);
-        
-        // Save wallet first
-        dataManager->saveWallet(wallet);
 
-        // Save user
-        if (dataManager->saveUser(user)) {
-            // Add to cache
-            userCache[username] = user;
-            
-            result.success = true;
-            result.message = "Account registered successfully!";
+        // FIRST: Save user to database (required for foreign key constraint)
+        if (!dataManager->saveUser(user)) {
+            result.message = "Error saving user to database!";
+            return result;
+        }
+        
+        // Add to cache
+        userCache[username] = user;
+
+        // SECOND: Create wallet using WalletManager (now that user exists in DB)
+        if (!walletManager->createUserWallet(userId, walletId)) {
+            // If wallet creation fails, we should remove the user from database
+            dataManager->deleteUser(userId);
+            userCache.erase(username);
+            result.message = "Error creating user wallet!";
+            return result;
+        }
+        
+        result.success = true;
+        if (userRole == UserRole::ADMIN) {
+            result.message = "First admin account created successfully!";
         } else {
-            result.message = "Error saving user data!";
+            result.message = "Account registered successfully!";
         }
     }
     catch (const std::exception& e) {
@@ -111,8 +131,8 @@ RegistrationResult AuthSystem::createAccount(const std::string& username,
                                            UserRole role,
                                            bool autoGeneratePassword) {
     RegistrationResult result;
-    result.success = false;    // Only admin can create accounts
-    if (!isCurrentUserAdmin()) {
+    result.success = false;    // Only admin can create accounts, unless no admin exists yet
+    if (!isCurrentUserAdmin() && hasAnyAdmin()) {
         result.message = "No permission to create accounts!";
         return result;
     }
@@ -136,7 +156,9 @@ RegistrationResult AuthSystem::createAccount(const std::string& username,
             result.generatedPassword = password;
         } else {
             password = "123456789"; // Default password
-        }        // Generate a unique user ID
+        }
+        
+        // Generate a unique user ID
         std::string userId = SecurityUtils::generateUUID();
         
         // Tạo user mới
@@ -153,24 +175,30 @@ RegistrationResult AuthSystem::createAccount(const std::string& username,
         // Đánh dấu cần đổi mật khẩu
         user->setRequirePasswordChange(true);
 
-        // Tạo ví mặc định with a unique wallet ID
+        // Generate wallet ID
         std::string walletId = SecurityUtils::generateUUID();
-        auto wallet = std::make_shared<Wallet>(walletId, userId, 0.0);
         user->setWalletId(walletId);
-        
-        // Save wallet first
-        dataManager->saveWallet(wallet);
 
-        // Lưu user
-        if (dataManager->saveUser(user)) {
-            // Thêm vào cache
-            userCache[username] = user;
-            
-            result.success = true;
-            result.message = "Account created successfully!";
-        } else {
+        // FIRST: Save user to database (required for foreign key constraint)
+        if (!dataManager->saveUser(user)) {
             result.message = "Error saving user data!";
+            return result;
         }
+        
+        // Add to cache
+        userCache[username] = user;
+
+        // SECOND: Create wallet using WalletManager (now that user exists in DB)
+        if (!walletManager->createUserWallet(userId, walletId)) {
+            // If wallet creation fails, we should remove the user from database
+            dataManager->deleteUser(userId);
+            userCache.erase(username);
+            result.message = "Error creating user wallet!";
+            return result;
+        }
+        
+        result.success = true;
+        result.message = "Account created successfully!";
     }
     catch (const std::exception& e) {
         result.message = "System error: " + std::string(e.what());
@@ -260,7 +288,7 @@ bool AuthSystem::changePassword(const std::string& userId,
         return dataManager->saveUser(user);
     }
     catch (const std::exception& e) {
-        std::cerr << "Lỗi đổi mật khẩu: " << e.what() << std::endl;
+        std::cerr << "Loi doi mat khau: " << e.what() << std::endl;
         return false;
     }
 }
@@ -290,7 +318,7 @@ bool AuthSystem::updateProfile(const std::string& userId,
         return dataManager->saveUser(user);
     }
     catch (const std::exception& e) {
-        std::cerr << "Lỗi cập nhật thông tin: " << e.what() << std::endl;
+        std::cerr << "Loi cap nhat thong tin: " << e.what() << std::endl;
         return false;
     }
 }
@@ -305,8 +333,64 @@ std::string AuthSystem::requestProfileUpdateOTP(const std::string& userId) {
         return otpManager->generateOTP(userId, OTPType::PROFILE_UPDATE);
     }
     catch (const std::exception& e) {
-        std::cerr << "Lỗi tạo OTP: " << e.what() << std::endl;
+        std::cerr << "Loi tao OTP: " << e.what() << std::endl;
         return "";
+    }
+}
+
+std::string AuthSystem::requestPasswordChangeOTP(const std::string& userId) {
+    try {
+        auto user = findUserById(userId);
+        if (!user) {
+            return "";
+        }
+
+        return otpManager->generatePasswordChangeOTP(userId);
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Loi tao OTP cho doi mat khau: " << e.what() << std::endl;
+        return "";
+    }
+}
+
+bool AuthSystem::changePasswordWithOTP(const std::string& userId,
+                                       const std::string& oldPassword,
+                                       const std::string& newPassword,
+                                       const std::string& otpCode) {
+    try {
+        auto user = findUserById(userId);
+        if (!user) {
+            return false;
+        }
+
+        // Verify OTP first
+        if (!otpManager->verifyPasswordChangeOTP(userId, otpCode)) {
+            return false;
+        }
+
+        // Check old password (except for admin reset)
+        bool isAdminReset = isCurrentUserAdmin() && currentUser->getId() != userId;
+        if (!isAdminReset) {
+            if (!SecurityUtils::verifyPassword(oldPassword, user->getPasswordHash())) {
+                return false;
+            }
+        }
+
+        // Check new password length
+        if (newPassword.length() < 8) {
+            return false;
+        }
+
+        // Update password
+        user->setPasswordHash(SecurityUtils::hashPassword(newPassword));
+        user->setRequirePasswordChange(false);
+
+        // Save changes
+        return dataManager->saveUser(user);
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Loi doi mat khau voi OTP: " << e.what() << std::endl;
+        return false;
     }
 }
 
@@ -314,20 +398,34 @@ bool AuthSystem::isCurrentUserAdmin() const {
     return currentUser && currentUser->getRole() == UserRole::ADMIN;
 }
 
+bool AuthSystem::hasAnyAdmin() const {
+    try {
+        auto users = dataManager->loadAllUsers();
+        for (const auto& user : users) {
+            if (user->getRole() == UserRole::ADMIN) {
+                return true;
+            }
+        }
+        return false;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Error checking for admin users: " << e.what() << std::endl;
+        return false;
+    }
+}
+
 std::vector<std::shared_ptr<User>> AuthSystem::getAllUsers() {
     std::vector<std::shared_ptr<User>> users;
     
     if (!isCurrentUserAdmin()) {
         return users; // Chỉ admin mới được xem danh sách
-    }    try {
-        auto uniqueUsers = dataManager->loadAllUsers();
-        // Convert unique_ptr to shared_ptr
-        for (auto& uniqueUser : uniqueUsers) {
-            users.push_back(std::shared_ptr<User>(uniqueUser.release()));
-        }
+    }
+    
+    try {
+        users = dataManager->loadAllUsers();
     }
     catch (const std::exception& e) {
-        std::cerr << "Lỗi tải danh sách user: " << e.what() << std::endl;
+        std::cerr << "Loi tai danh sach user: " << e.what() << std::endl;
     }
 
     return users;
@@ -359,7 +457,7 @@ std::shared_ptr<User> AuthSystem::findUserById(const std::string& userId) {
         return nullptr;
     }
     catch (const std::exception& e) {
-        std::cerr << "Lỗi tìm user: " << e.what() << std::endl;
+        std::cerr << "Loi tim user: " << e.what() << std::endl;
         return nullptr;
     }
 }
@@ -378,7 +476,7 @@ bool AuthSystem::saveUser(std::shared_ptr<User> user) {
         return success;
     }
     catch (const std::exception& e) {
-        std::cerr << "Lỗi lưu user: " << e.what() << std::endl;
+        std::cerr << "Loi luu user: " << e.what() << std::endl;
         return false;
     }
 }
@@ -399,7 +497,7 @@ void AuthSystem::createDefaultAdmin() {
             adminId,
             "admin",
             SecurityUtils::hashPassword("admin123"),
-            "Quản trị viên hệ thống",
+            "Quan tri vien he thong",
             "admin@system.com",
             "0000000000",
             UserRole::ADMIN        
@@ -463,7 +561,7 @@ std::shared_ptr<User> AuthSystem::loadUserToCache(const std::string& username) {
         return nullptr;
     }
     catch (const std::exception& e) {
-        std::cerr << "Lỗi tải user vào cache: " << e.what() << std::endl;
+        std::cerr << "Loi tai user vao cache: " << e.what() << std::endl;
         return nullptr;
     }
 }

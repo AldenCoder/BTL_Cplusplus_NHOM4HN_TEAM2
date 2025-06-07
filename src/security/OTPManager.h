@@ -1,9 +1,3 @@
-/**
- * @file OTPManager.h
- * @brief Header file cho OTPManager class
- * @author Team 2C
- */
-
 #ifndef OTPMANAGER_H
 #define OTPMANAGER_H
 
@@ -18,7 +12,8 @@ class SecurityUtils;
  */
 enum class OTPType {
     PROFILE_UPDATE,  // OTP cho cập nhật thông tin cá nhân
-    TRANSFER        // OTP cho giao dịch chuyển điểm
+    TRANSFER,       // OTP cho giao dịch chuyển điểm
+    PASSWORD_CHANGE // OTP cho thay đổi mật khẩu
 };
 
 /**
@@ -27,7 +22,7 @@ enum class OTPType {
  */
 class OTPManager {
 private:
-    SecurityUtils* securityUtils;
+    // SecurityUtils* securityUtils;  // Commented out until needed
 
 public:
     /**
@@ -78,6 +73,13 @@ public:
                                    const std::string& toWalletId);
 
     /**
+     * @brief Tạo OTP cho thay đổi mật khẩu
+     * @param userId ID người dùng
+     * @return Mã OTP
+     */
+    std::string generatePasswordChangeOTP(const std::string& userId);
+
+    /**
      * @brief Xác thực OTP thay đổi thông tin
      * @param userId ID người dùng
      * @param otpCode Mã OTP
@@ -96,6 +98,15 @@ public:
     bool verifyTransferOTP(const std::string& userId, 
                           const std::string& otpCode,
                           const std::string& toWalletId);
+
+    /**
+     * @brief Xác thực OTP thay đổi mật khẩu
+     * @param userId ID người dùng
+     * @param otpCode Mã OTP
+     * @return true nếu hợp lệ
+     */
+    bool verifyPasswordChangeOTP(const std::string& userId, 
+                                const std::string& otpCode);
 
     /**
      * @brief Mô phỏng gửi OTP qua email/SMS
