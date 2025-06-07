@@ -2,6 +2,7 @@
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
+#include "picosha2.h"
 #include <functional>  // For std::hash
 // Removed OpenSSL includes for simple compilation
 
@@ -200,21 +201,21 @@ void SecurityUtils::cleanupExpiredOTP() {
     }
 }
 
+// std::string SecurityUtils::sha256(const std::string& input) {
+//     std::hash<std::string> hasher;
+//     size_t hashValue = hasher(input);
+//     std::ostringstream ss;
+//     ss << std::hex << hashValue;
+    
+//     std::string result = ss.str();
+//     while(result.length() < 64) {
+//         result = "0" + result;
+//     }
+//     return result;
+// }
+
 std::string SecurityUtils::sha256(const std::string& input) {
-    // Simple hash using std::hash (not cryptographically secure, for demo only)
-    std::hash<std::string> hasher;
-    size_t hashValue = hasher(input);
-    
-    // Convert to hex string
-    std::ostringstream ss;
-    ss << std::hex << hashValue;
-    
-    // Pad with zeros and extend to make it look like a proper hash
-    std::string result = ss.str();
-    while(result.length() < 64) {  // SHA256 is 64 hex chars
-        result = "0" + result;
-    }
-    return result;
+    return picosha2::hash256_hex_string(input);
 }
 
 std::string SecurityUtils::bytesToHex(const unsigned char* bytes, size_t length) {
