@@ -1,4 +1,4 @@
-# Hệ thống Đăng nhập và Quản lý Ví Điểm Thưởng
+# Hệ thống Đăng nhập và Quản lý Ví Điểm Thưởng - LỚP C++ NHÓM 4 HN - NHÓM 2
 
 Một hệ thống quản lý điểm thưởng an toàn dựa trên SQLite được xây dựng bằng C++, xử lý xác thực người dùng, giao dịch ví và kiểm soát quản trị với tính toàn vẹn dữ liệu tuân thủ ACID.
 
@@ -331,4 +331,4 @@ CREATE TABLE transactions (
 5. **C++17 Reference**: [https://en.cppreference.com/w/cpp/17](https://en.cppreference.com/w/cpp/17) - Tài liệu C++17
 6. **SQLite Documentation**: [https://www.sqlite.org/docs.html](https://www.sqlite.org/docs.html) - Tài liệu SQLite
 
-**Nhóm 2 C++** - Hệ thống Quản lý Ví Điểm Thưởng © 2025
+**LỚP C++ NHÓM 4 HN - NHÓM 2** - Hệ thống Quản lý Ví Điểm Thưởng © 2025
