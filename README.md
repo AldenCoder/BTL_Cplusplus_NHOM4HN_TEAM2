@@ -37,32 +37,24 @@ Một hệ thống quản lý điểm thưởng an toàn dựa trên SQLite đư
 
 | STT | Họ tên | MSSV | Công việc được giao |
 |-----|--------|------|-------------------|
-| 1 | [Tên thành viên 1] | [MSSV] | **Kiến trúc Hệ thống & Bảo mật**: Thiết kế kiến trúc hệ thống, triển khai SecurityUtils, hệ thống OTP |
-| 2 | [Tên thành viên 2] | [MSSV] | **Quản lý Người dùng**: Triển khai lớp User, AuthSystem, xác thực người dùng |
-| 3 | [Tên thành viên 3] | [MSSV] | **Hệ thống Ví**: Triển khai lớp Wallet, WalletManager, xử lý giao dịch |
-| 4 | [Tên thành viên 4] | [MSSV] | **Quản lý Dữ liệu & Giao diện**: Triển khai DatabaseManager, UserInterface, hệ thống sao lưu |
+| 1 | [Trịnh Xuân Dũng] | [K24DTCN579] | **Kiến trúc Hệ thống & Bảo mật**: Thiết kế kiến trúc hệ thống, triển khai SecurityUtils, hệ thống OTP |
+| 2 | [Ngô Thị Hồng Nhung] | [K24DTCN619] | **Quản lý Người dùng**: Triển khai lớp User, AuthSystem, xác thực người dùng |
+| 3 | [Nguyễn Minh Tâm] | [MSSV] | **Hệ thống Ví**: Triển khai lớp Wallet, WalletManager, xử lý giao dịch |
+| 4 | [Hoàng Triệu] | [MSSV] | **Quản lý Dữ liệu & Giao diện**: Triển khai DatabaseManager, UserInterface, hệ thống sao lưu |
 
-## ✨ Tính năng nổi bật (Phiên bản hiện tại)
+## ✨ Tính năng hiện tại
 
 ### 🔄 **Khởi tạo Cơ sở dữ liệu Trống**
-- **Thay đổi quan trọng**: Hệ thống bắt đầu với cơ sở dữ liệu hoàn toàn trống
-- **Không tạo admin mặc định**: Không tự động tạo tài khoản admin như trước
 - **Người dùng đầu tiên làm admin**: Người đăng ký đầu tiên sẽ tự động trở thành quản trị viên
-- **Kiểm soát bảo mật**: Đảm bảo kiểm soát thủ công đối với tài khoản admin đầu tiên
-
-### 🗃️ **Chuyển đổi sang Cơ sở dữ liệu SQLite**
-- **Trước đây**: Hệ thống lưu trữ dựa trên file JSON
-- **Hiện tại**: Cơ sở dữ liệu SQLite với tuân thủ ACID
-- **Lợi ích**: Tính toàn vẹn dữ liệu tốt hơn, truy cập đồng thời và hiệu suất
-- **Chuyển đổi tự động**: Tạo schema tự động khi chạy lần đầu
+- **Kiểm soát bảo mật**: Kiểm soát thủ công đối với tài khoản admin đầu tiên
+- **Cơ sở dữ liệu SQLite**
 
 ### 🔑 **Tạo Mật khẩu Tự động**
 - **Chức năng**: Admin có thể tạo tài khoản cho người dùng với mật khẩu được sinh tự động
 - **Bảo mật**: Mật khẩu ngẫu nhiên 12 ký tự (chữ cái, số, ký tự đặc biệt)
-- **Cải tiến Giao diện**: Hiển thị mật khẩu đã tạo với cảnh báo rõ ràng cho admin
 - **Triển khai**: Sử dụng `SecurityUtils::generateSecurePassword()`
 
-### 📦 **Hệ thống Sao lưu Nâng cao**
+### 📦 **Hệ thống Sao lưu**
 - **Sao lưu thủ công**: Admin có thể tạo sao lưu bất kỳ lúc nào với mô tả tùy chỉnh
 - **Lịch sử sao lưu**: Xem danh sách tất cả sao lưu với thông tin chi tiết (ID, thời gian, kích thước)
 - **Phục hồi dữ liệu**: Chọn từ danh sách sao lưu và phục hồi với sao lưu an toàn tự động
@@ -75,7 +67,7 @@ Một hệ thống quản lý điểm thưởng an toàn dựa trên SQLite đư
 - **Theo dõi Giao dịch**: Ghi nhận tất cả giao dịch phát hành với lý do
 - **Quản lý Số dư**: Tự động cập nhật số dư ví người dùng
 
-### ✅ **Xác thực Nâng cao**
+### ✅ **Xác thực**
 - **Xác thực Email**: Kiểm tra định dạng email theo chuẩn RFC với kiểm tra bổ sung
   - Không cho phép dấu chấm liên tiếp (..)
   - Không cho phép dấu chấm ở đầu/cuối
@@ -85,28 +77,23 @@ Một hệ thống quản lý điểm thưởng an toàn dựa trên SQLite đư
   - Tự động loại bỏ ký tự phân cách (space, dash, brackets)
   - Kiểm tra pattern phù hợp với tiêu chuẩn VN
 
-### 🔧 **Cải thiện Giao diện/Trải nghiệm Người dùng**
+### 🔧 **Giao diện người dùng**
 - **Hệ thống Cảnh báo**: Thêm phương thức `showWarning()` cho các cảnh báo quan trọng
 - **Hiển thị Được định dạng**: Hiển thị kích thước file, datetime theo định dạng dễ đọc
-- **Cải tiến Menu**: Quản lý sao lưu với submenu đầy đủ chức năng
-- **Xử lý Lỗi**: Xử lý lỗi tốt hơn với try-catch và thông báo rõ ràng
+- **Menu**: Quản lý sao lưu với submenu đầy đủ chức năng
+- **Xử lý Lỗi**: Xử lý lỗi với try-catch và thông báo rõ ràng
 
 ## 🚀 Hướng dẫn Cài đặt
 
-### Yêu cầu Tiên quyết
-
 #### **Windows**
 ```bash
-cài sqlite
+# Cài sqlite
 .\build.ps1
 .\bin\wallet_system.exe
 ```
 
 #### **macOS**
 ```bash
-# Cài đặt Homebrew nếu chưa có
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
 # Cài đặt dependencies cần thiết
 brew install sqlite3
 brew install pkg-config
@@ -122,20 +109,12 @@ sudo apt update
 
 # Cài đặt dependencies cần thiết
 sudo apt install g++ sqlite3 libsqlite3-dev pkg-config make cmake
-
-# Cho các distro khác:
-# CentOS/RHEL: sudo yum install gcc-c++ sqlite-devel pkgconfig make cmake
-# Arch Linux: sudo pacman -S gcc sqlite pkg-config make cmake
 ```
 
 ### 📥 Cài đặt & Biên dịch
 
-#### **Lựa chọn 1: Sử dụng Makefile (Khuyến nghị)**
+#### **Lựa chọn 1: Sử dụng Makefile**
 ```bash
-# Clone repository
-git clone <repository-url>
-cd team2C
-
 # Biên dịch dự án
 make
 
@@ -145,10 +124,6 @@ make
 
 #### **Lựa chọn 2: Sử dụng CMake**
 ```bash
-# Clone repository
-git clone <repository-url>
-cd team2C
-
 # Tạo thư mục build
 mkdir build && cd build
 
@@ -175,7 +150,7 @@ make
    - Chọn tên người dùng và mật khẩu mạnh để bảo mật
 
 3. **Cấu hình Hệ thống Ban đầu**
-   - Đăng nhập với tài khoản admin của bạn
+   - Đăng nhập với tài khoản admin
    - Thiết lập các tài khoản người dùng bổ sung nếu cần
    - Cấu hình thiết lập sao lưu
 
@@ -325,72 +300,6 @@ CREATE TABLE transactions (
 - **Số lượng Sao lưu Tối đa**: 10 sao lưu
 - **Khoảng thời gian Sao lưu Tự động**: 24 giờ
 
-## 🎯 Thay đổi Chính từ Phiên bản Trước
-
-### **🔄 Khởi tạo Cơ sở dữ liệu Trống**
-- **Trước**: Hệ thống tự động tạo tài khoản admin mặc định
-- **Hiện tại**: Cơ sở dữ liệu bắt đầu hoàn toàn trống
-- **Người dùng Đầu tiên**: Tự động trở thành quản trị viên
-- **Bảo mật**: Đảm bảo kiểm soát thủ công đối với tài khoản admin ban đầu
-
-### **🗃️ Chuyển đổi Cơ sở dữ liệu SQLite**
-- **Trước**: Hệ thống lưu trữ dựa trên file JSON
-- **Hiện tại**: Cơ sở dữ liệu SQLite với tuân thủ ACID
-- **Lợi ích**: Tính toàn vẹn dữ liệu tốt hơn, truy cập đồng thời và hiệu suất
-- **Chuyển đổi**: Tạo schema tự động khi chạy lần đầu
-
-### **⚡ Hiệu suất Nâng cao**
-- **Lập chỉ mục Cơ sở dữ liệu**: Truy vấn được tối ưu hóa với chỉ mục phù hợp
-- **Chế độ WAL**: Write-Ahead Logging cho hiệu suất đồng thời tốt hơn
-- **Tập hợp Kết nối**: Quản lý kết nối cơ sở dữ liệu hiệu quả
-- **Sử dụng Bộ nhớ**: Sử dụng bộ nhớ được tối ưu hóa với smart pointers
-
-## 🐛 Khắc phục Sự cố
-
-### **Các Vấn đề Thường gặp**
-
-#### **Lỗi Biên dịch**
-```bash
-# Không tìm thấy SQLite3
-sudo apt install libsqlite3-dev  # Ubuntu/Debian
-brew install sqlite3             # macOS
-# Windows: Tải SQLite3 development libraries
-
-# Lỗi compiler
-# Đảm bảo hỗ trợ C++17 (GCC 7+ hoặc Clang 5+)
-g++ --version
-```
-
-#### **Lỗi Runtime**
-```bash
-# Lỗi quyền cơ sở dữ liệu
-chmod 755 data/
-chmod 644 data/wallet_system.db
-
-# Thiếu dependencies
-ldd ./bin/wallet_system  # Linux
-otool -L ./bin/wallet_system  # macOS
-```
-
-#### **Vấn đề Cơ sở dữ liệu**
-```bash
-# Kiểm tra tính toàn vẹn cơ sở dữ liệu
-sqlite3 data/wallet_system.db "PRAGMA integrity_check;"
-
-# Reset cơ sở dữ liệu (CẢNH BÁO: Điều này xóa tất cả dữ liệu)
-rm data/wallet_system.db
-# Khởi động lại ứng dụng để tạo lại cơ sở dữ liệu
-```
-
-### **Tối ưu hóa Hiệu suất**
-```bash
-# Bật chế độ WAL cho hiệu suất tốt hơn
-sqlite3 data/wallet_system.db "PRAGMA journal_mode=WAL;"
-
-# Phân tích hiệu suất cơ sở dữ liệu
-sqlite3 data/wallet_system.db "ANALYZE;"
-```
-
 ## 🔄 Sao lưu & Khôi phục
 
 ### **Sao lưu Tự động**
@@ -400,7 +309,6 @@ sqlite3 data/wallet_system.db "ANALYZE;"
 
 ### **Sao lưu Thủ công**
 ```bash
-# Tạo sao lưu thủ công
 # Truy cập qua menu admin -> Quản lý Sao lưu -> Tạo Sao lưu Thủ công
 
 # File sao lưu được lưu trữ trong: data/backup/
