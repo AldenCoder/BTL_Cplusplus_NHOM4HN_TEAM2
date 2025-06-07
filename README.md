@@ -1,4 +1,4 @@
-# Hệ thống Đăng nhập và Quản lý Ví Điểm Thưởng
+# Hệ thống Đăng nhập và Quản lý Ví Điểm Thưởng - LỚP C++ NHÓM 4 HN - NHÓM 2
 
 Một hệ thống quản lý điểm thưởng an toàn dựa trên SQLite được xây dựng bằng C++, xử lý xác thực người dùng, giao dịch ví và kiểm soát quản trị với tính toàn vẹn dữ liệu tuân thủ ACID.
 
@@ -37,10 +37,10 @@ Một hệ thống quản lý điểm thưởng an toàn dựa trên SQLite đư
 
 | STT | Họ tên | MSSV | Công việc được giao |
 |-----|--------|------|-------------------|
-| 1 | [Trịnh Xuân Dũng] | [K24DTCN579] | **Kiến trúc Hệ thống & Bảo mật**: Thiết kế kiến trúc hệ thống, triển khai SecurityUtils, hệ thống OTP |
+| 1 | [Trịnh Xuân Dũng] | [K24DTCN579] | **Kiến trúc Hệ thống & Bảo mật & Quản lý Dữ liệu &**: Thiết kế kiến trúc hệ thống, triển khai SecurityUtils, hệ thống OTP, Triển khai DatabaseManager |
 | 2 | [Ngô Thị Hồng Nhung] | [K24DTCN619] | **Quản lý Người dùng**: Triển khai lớp User, AuthSystem, xác thực người dùng |
-| 3 | [Nguyễn Minh Tâm] | [MSSV] | **Hệ thống Ví**: Triển khai lớp Wallet, WalletManager, xử lý giao dịch |
-| 4 | [Triệu Đức Hoàng] | [K24DTCN598] | **Quản lý Dữ liệu & Giao diện**: Triển khai DatabaseManager, UserInterface, hệ thống sao lưu |
+| 3 | [Nguyễn Minh Tâm] | [K24DTCN627] | **Hệ thống Ví**: Triển khai lớp Wallet, WalletManager, xử lý giao dịch |
+| 4 | [Triệu Đức Hoàng] | [K24DTCN598] | **Giao diện**: UserInterface, hệ thống sao lưu, testing toàn bộ hệ thống |
 
 ## ✨ Tính năng hiện tại
 
@@ -82,6 +82,24 @@ Một hệ thống quản lý điểm thưởng an toàn dựa trên SQLite đư
 - **Hiển thị Được định dạng**: Hiển thị kích thước file, datetime theo định dạng dễ đọc
 - **Menu**: Quản lý sao lưu với submenu đầy đủ chức năng
 - **Xử lý Lỗi**: Xử lý lỗi với try-catch và thông báo rõ ràng
+
+### Cấu trúc thư mục:
+```
+project/
+├── src/                   # Source code
+│   ├── models/            # Data models (User, Wallet)Add commentMore actions
+│   ├── security/          # Security utilities (Hash, OTP)
+│   ├── storage/           # Data management
+│   ├── system/            # Core systems (Auth, WalletManager)
+│   ├── ui/                # User interface
+│   └── main.cpp           # Entry point
+├── data/                  # User data storage
+├── backup/                # Backup files  
+├── logs/                  # Log files
+├── Makefile               # Build configuration
+├── CMakeLists.txt         # CMake configuration
+└── README.md              # Documentation
+```
 
 ## 🚀 Hướng dẫn Cài đặt
 
@@ -331,4 +349,4 @@ CREATE TABLE transactions (
 5. **C++17 Reference**: [https://en.cppreference.com/w/cpp/17](https://en.cppreference.com/w/cpp/17) - Tài liệu C++17
 6. **SQLite Documentation**: [https://www.sqlite.org/docs.html](https://www.sqlite.org/docs.html) - Tài liệu SQLite
 
-**Nhóm 2 C++** - Hệ thống Quản lý Ví Điểm Thưởng © 2025
+**LỚP C++ NHÓM 4 HN - NHÓM 2** - Hệ thống Quản lý Ví Điểm Thưởng © 2025
