@@ -338,6 +338,62 @@ std::string AuthSystem::requestProfileUpdateOTP(const std::string& userId) {
     }
 }
 
+std::string AuthSystem::requestPasswordChangeOTP(const std::string& userId) {
+    try {
+        auto user = findUserById(userId);
+        if (!user) {
+            return "";
+        }
+
+        return otpManager->generatePasswordChangeOTP(userId);
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Loi tao OTP cho doi mat khau: " << e.what() << std::endl;
+        return "";
+    }
+}
+
+bool AuthSystem::changePasswordWithOTP(const std::string& userId,
+                                       const std::string& oldPassword,
+                                       const std::string& newPassword,
+                                       const std::string& otpCode) {
+    try {
+        auto user = findUserById(userId);
+        if (!user) {
+            return false;
+        }
+
+        // Verify OTP first
+        if (!otpManager->verifyPasswordChangeOTP(userId, otpCode)) {
+            return false;
+        }
+
+        // Check old password (except for admin reset)
+        bool isAdminReset = isCurrentUserAdmin() && currentUser->getId() != userId;
+        if (!isAdminReset) {
+            if (!SecurityUtils::verifyPassword(oldPassword, user->getPasswordHash())) {
+                return false;
+            }
+        }
+
+        // Check new password length
+        if (newPassword.length() < 8) {
+            return false;
+        }
+
+        // Update password
+        user->setPasswordHash(SecurityUtils::hashPassword(newPassword));
+        user->setRequirePasswordChange(false);
+
+        // Save changes
+        return dataManager->saveUser(user);
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Loi doi mat khau voi OTP: " << e.what() << std::endl;
+        return false;
+    }
+}
+
 bool AuthSystem::isCurrentUserAdmin() const {
     return currentUser && currentUser->getRole() == UserRole::ADMIN;
 }
@@ -441,7 +497,7 @@ void AuthSystem::createDefaultAdmin() {
             adminId,
             "admin",
             SecurityUtils::hashPassword("admin123"),
-            "Quản trị viên hệ thống",
+            "Quan tri vien he thong",
             "admin@system.com",
             "0000000000",
             UserRole::ADMIN        

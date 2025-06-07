@@ -68,46 +68,6 @@ std::string SecurityUtils::generatePassword(int length, bool includeSpecialChars
     return password;
 }
 
-// std::string SecurityUtils::generateOTP(const std::string& userId, const std::string& purpose) {
-//     // Generate 6-digit OTP
-//     std::uniform_int_distribution<> dist(100000, 999999);
-//     std::string otp = std::to_string(dist(rng));
-    
-//     // Store OTP with expiration time
-//     auto expiry = std::chrono::system_clock::now() + 
-//                   std::chrono::minutes(OTP_VALIDITY_MINUTES);
-    
-//     std::string key = userId + "_" + purpose;
-//     otpStore[key] = {otp, expiry};
-    
-//     return otp;
-// }
-
-// bool SecurityUtils::verifyOTP(const std::string& userId, const std::string& otpCode, const std::string& purpose) {
-//     std::string key = userId + "_" + purpose;
-    
-//     auto it = otpStore.find(key);
-//     if (it == otpStore.end()) {
-//         return false;
-//     }
-    
-//     // Check expiration time
-//     auto now = std::chrono::system_clock::now();
-//     if (now > it->second.second) {
-//         otpStore.erase(it);
-//         return false;
-//     }
-//       // Check OTP code
-//     bool valid = (it->second.first == otpCode);
-    
-//     // Delete OTP after use (one-time)
-//     if (valid) {
-//         otpStore.erase(it);
-//     }
-    
-//     return valid;
-// }
-
 std::string SecurityUtils::generateOTP(const std::string& userId, const std::string& purpose) {
     std::uniform_int_distribution<> dist(100000, 999999);
     std::string otp = std::to_string(dist(rng));
@@ -209,31 +169,6 @@ std::string SecurityUtils::decrypt(const std::string& encryptedData, const std::
     
     return decrypted;
 }
-
-// void SecurityUtils::cleanupExpiredOTP() {
-//     auto now = std::chrono::system_clock::now();
-    
-//     for (auto it = otpStore.begin(); it != otpStore.end();) {
-//         if (now > it->second.second) {
-//             it = otpStore.erase(it);
-//         } else {
-//             ++it;
-//         }
-//     }
-// }
-
-// std::string SecurityUtils::sha256(const std::string& input) {
-//     std::hash<std::string> hasher;
-//     size_t hashValue = hasher(input);
-//     std::ostringstream ss;
-//     ss << std::hex << hashValue;
-    
-//     std::string result = ss.str();
-//     while(result.length() < 64) {
-//         result = "0" + result;
-//     }
-//     return result;
-// }
 
 std::string SecurityUtils::sha256(const std::string& input) {
     return picosha2::hash256_hex_string(input);

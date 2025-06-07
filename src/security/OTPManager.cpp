@@ -25,6 +25,9 @@ std::string OTPManager::generateOTP(const std::string& userId, OTPType type) {
         case OTPType::TRANSFER:
             purpose = "transfer";
             break;
+        case OTPType::PASSWORD_CHANGE:
+            purpose = "password_change";
+            break;
         default:
             purpose = "general";
             break;
@@ -59,6 +62,9 @@ bool OTPManager::verifyOTP(const std::string& userId,
             break;
         case OTPType::TRANSFER:
             purpose = "transfer";
+            break;
+        case OTPType::PASSWORD_CHANGE:
+            purpose = "password_change";
             break;
         default:
             purpose = "general";
@@ -129,6 +135,35 @@ bool OTPManager::verifyTransferOTP(const std::string& userId,
                                   const std::string& toWalletId) {
     std::string purpose = "transfer_" + toWalletId;
     return SecurityUtils::verifyOTP(userId, otpCode, purpose);
+}
+
+/**
+ * @brief Tạo OTP cho thay đổi mật khẩu
+ * @param userId ID người dùng
+ * @return Mã OTP
+ */
+std::string OTPManager::generatePasswordChangeOTP(const std::string& userId) {
+    std::string otp = SecurityUtils::generateOTP(userId, "password_change");
+    
+    // Simulate sending OTP (in reality would be sent via email/SMS)
+    std::cout << "\n=== OTP CODE FOR PASSWORD CHANGE ===\n";
+    std::cout << "OTP code for password change: " << otp << "\n";
+    std::cout << "This code is valid for 5 minutes.\n";
+    std::cout << "For security, this would normally be sent to your registered email/SMS.\n";
+    std::cout << "====================================\n\n";
+    
+    return otp;
+}
+
+/**
+ * @brief Xác thực OTP thay đổi mật khẩu
+ * @param userId ID người dùng
+ * @param otpCode Mã OTP
+ * @return true nếu hợp lệ
+ */
+bool OTPManager::verifyPasswordChangeOTP(const std::string& userId,
+                                        const std::string& otpCode) {
+    return SecurityUtils::verifyOTP(userId, otpCode, "password_change");
 }
 
 /**

@@ -331,7 +331,7 @@ void UserInterface::logout() {
 void UserInterface::viewProfile() {
     clearScreen();
     showHeader();
-      std::cout << "+--------------------------------------------------+\n";
+    std::cout << "+--------------------------------------------------+\n";
     std::cout << "|                PERSONAL INFORMATION              |\n";
     std::cout << "+--------------------------------------------------+\n\n";
 
@@ -349,6 +349,8 @@ void UserInterface::changePassword() {
     std::cout << "|                CHANGE PASSWORD                   |\n";
     std::cout << "+--------------------------------------------------+\n\n";
     
+    auto user = authSystem.getCurrentUser();
+    
     std::string oldPassword = getPassword("Current password: ");
     std::string newPassword = getPassword("New password (at least 8 characters): ");
     std::string confirmPassword = getPassword("Confirm new password: ");
@@ -365,11 +367,37 @@ void UserInterface::changePassword() {
         return;
     }
     
+    // Generate OTP for password change
+    showInfo("Generating OTP code for password change...");
+    std::string otpCode = authSystem.requestPasswordChangeOTP(user->getId());
+    if (otpCode.empty()) {
+        showError("Cannot generate OTP code!");
+        pauseScreen();
+        return;
+    }
+
+    showInfo("Your OTP code is: " + otpCode);
+    showInfo("(In reality, this code would be sent via email/SMS)");
+    
+    // Confirm password change details
+    std::cout << "\n" << "=== CONFIRM PASSWORD CHANGE ===\n";
+    std::cout << "User: " << user->getFullName() << "\n";
+    std::cout << "Action: Change password\n\n";
+    
+    if (!confirmAction("Are you sure you want to change your password?")) {
+        showInfo("Password change cancelled!");
+        pauseScreen();
+        return;
+    }
+    
+    std::string inputOTP = getInput("Enter OTP code: ");
+    if (inputOTP.empty()) return;
+    
     showInfo("Updating password...");
-    if (authSystem.changePassword(authSystem.getCurrentUser()->getId(), oldPassword, newPassword)) {
+    if (authSystem.changePasswordWithOTP(user->getId(), oldPassword, newPassword, inputOTP)) {
         showSuccess("Password changed successfully!");
     } else {
-        showError("Password change failed! Please check your old password.");
+        showError("Password change failed! Please check your old password and OTP code.");
     }
     
     pauseScreen();
@@ -378,7 +406,7 @@ void UserInterface::changePassword() {
 void UserInterface::updateProfile() {
     clearScreen();
     showHeader();
-      std::cout << "+--------------------------------------------------+\n";
+    std::cout << "+--------------------------------------------------+\n";
     std::cout << "|              UPDATE PERSONAL INFO               |\n";
     std::cout << "+--------------------------------------------------+\n\n";
 
@@ -442,7 +470,7 @@ void UserInterface::updateProfile() {
 void UserInterface::viewWalletBalance() {
     clearScreen();
     showHeader();
-      std::cout << "+--------------------------------------------------+\n";
+    std::cout << "+--------------------------------------------------+\n";
     std::cout << "|                 WALLET BALANCE                   |\n";
     std::cout << "+--------------------------------------------------+\n\n";
 
@@ -466,7 +494,7 @@ void UserInterface::viewWalletBalance() {
 void UserInterface::transferPoints() {
     clearScreen();
     showHeader();
-      std::cout << "+--------------------------------------------------+\n";
+    std::cout << "+--------------------------------------------------+\n";
     std::cout << "|                TRANSFER POINTS                   |\n";
     std::cout << "+--------------------------------------------------+\n\n";
 
