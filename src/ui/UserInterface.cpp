@@ -309,27 +309,27 @@ void UserInterface::registerScreen() {
     if (phoneNumber.empty()) return;
 
     // Validate password
-    std::string password;
-    int attempts = 0;
-    do {
-        password = getPassword("Password (at least 8 characters): ");
-        if (password.empty()) return;
-        if (!UserValidator::validateStrongPassword(password)) {
-            showError("Weak password! Please enter a stronger password.");
-            password = "";
-            attempts++;
-            if (attempts >= 3) {
-                showError("Too many invalid attempts! Returning to main menu.");
-                return;
+    std::string password = getValidatedInput(
+        "Password (at least 8 characters): ",
+        UserValidator::validateStrongPassword,
+        "Weak password! Please enter a stronger password.",
+        true
+    );
+    if (password.empty()) return;
+
+    std::string confirmPassword = getValidatedInput(
+        "Confirm password: ",
+        [this, password](const std::string& u) { 
+            if (u != password) {
+                return "Password confirmation does not match!";
             }
-        }
-    } while (password.empty());
-    std::string confirmPassword = getPassword("Confirm password: ");
-    if (confirmPassword != password) {
-        showError("Password confirmation does not match!");
-        pauseScreen();
-        return;
-    }
+            return "";
+        },
+        "",
+        true
+    );
+    if (confirmPassword.empty()) return;
+
 
     showInfo("Creating account...");
     auto result = authSystem.registerUser(username, password, fullName, email, phoneNumber);
@@ -375,29 +375,37 @@ void UserInterface::changePassword() {
     
     auto user = authSystem.getCurrentUser();
     
-    std::string oldPassword = getPassword("Current password: ");
-    std::string newPassword;
-    int attempts = 0;
-    do {
-        newPassword = getPassword("New password (at least 8 characters): ");
-        if (newPassword.empty()) return;
-        if (!UserValidator::validateStrongPassword(newPassword)) {
-            showError("Weak password! Please enter a stronger password.");
-            newPassword = "";
-            attempts++;
-            if (attempts >= 3) {
-                showError("Too many invalid attempts! Returning to main menu.");
-                return;
+    std::string oldPassword = getValidatedInput(
+        "Current Password: ",
+        [this, user](const std::string& p) { 
+            if (!SecurityUtils::verifyPassword(p, user->getPasswordHash())) {
+                return "Incorrect current password!";
             }
-        }
-    } while (newPassword.empty());
-    std::string confirmPassword = getPassword("Confirm new password: ");
-    
-    if (newPassword != confirmPassword) {
-        showError("Passwords do not match!");
-        pauseScreen();
-        return;
-    }
+            return "";
+        },
+        "",
+        true
+    );
+    // Validate password
+    std::string newPassword = getValidatedInput(
+        "New Password (at least 8 characters): ",
+        UserValidator::validateStrongPassword,
+        "Weak password! Please enter a stronger password.",
+        true
+    );
+    if (newPassword.empty()) return;
+
+    std::string confirmPassword = getValidatedInput(
+        "Confirm new password: ",
+        [this, newPassword](const std::string& u) { 
+            if (u != newPassword) {
+                return "Password confirmation does not match!";
+            }
+            return "";
+        },
+        "",
+        true
+    );
     
     // Generate OTP for password change
     showInfo("Generating OTP code for password change...");
@@ -449,7 +457,6 @@ void UserInterface::updateProfile() {
     displayUserInfo(*user);
     std::cout << "\n";
 
-    int attempts;
     // Validate full name
     std::string newFullName = getValidatedInput(
         "New full name (Enter to keep current): ",
@@ -1240,11 +1247,11 @@ void UserInterface::cleanupBackups() {
 // Helper template to reduce duplicate input-validation code
 // Usage: getValidatedInput(prompt, validator, errorMsg, [maxAttempts])
 template<typename Validator>
-std::string UserInterface::getValidatedInput(const std::string& prompt, Validator validator, const std::string& errorMsg, int maxAttempts) {
+std::string UserInterface::getValidatedInput(const std::string& prompt, Validator validator, const std::string& errorMsg, bool isSensitive, int maxAttempts) {
     std::string input;
     int attempts = 0;
     do {
-        input = getInput(prompt);
+        input = isSensitive ? getPassword(prompt) : getInput(prompt);
         if (input.empty()) return "";
         std::variant<bool, std::string> result = validator(input);
         if (std::holds_alternative<bool>(result)) {

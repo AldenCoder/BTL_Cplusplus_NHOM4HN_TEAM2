@@ -26,6 +26,7 @@ $sources = @(
     "src\system\AuthSystem.cpp",
     "src\system\WalletManager.cpp",
     "src\ui\UserInterface.cpp",
+    "src\ui\UserValidator.cpp",
     "sqlite\sqlite-amalgamation-3460100\sqlite3.c"
 )
 

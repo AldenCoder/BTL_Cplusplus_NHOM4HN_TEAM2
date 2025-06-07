@@ -343,7 +343,7 @@ private:
 
     // Helper template to reduce duplicate input-validation code
     template<typename Validator>
-    std::string getValidatedInput(const std::string& prompt, Validator validator, const std::string& errorMsg = "", int maxAttempts = 3);
+    std::string getValidatedInput(const std::string& prompt, Validator validator, const std::string& errorMsg = "", bool isSensitive = false, int maxAttempts = 3);
 };
 
 #endif // USER_INTERFACE_H
