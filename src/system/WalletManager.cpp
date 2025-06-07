@@ -285,12 +285,20 @@ bool WalletManager::setWalletLocked(const std::string& walletId, bool locked) {
     }
 }
 
-std::string WalletManager::issuePointsFromMaster(const std::string& toWalletId,
+std::string WalletManager::issuePointsFromMaster(const std::string& adminUserId,
+                                                const std::string& toWalletId,
                                                 double amount,
-                                                const std::string& description) {
+                                                const std::string& description,
+                                                const std::string& otpCode) {
     // std::lock_guard<std::mutex> lock(transferMutex); // disabled for MinGW
     
     try {
+        // Verify OTP first
+        if (!otpManager->verifyOTP(adminUserId, otpCode, OTPType::TRANSFER)) {
+            std::cerr << "[ERROR] Invalid or expired OTP code!" << std::endl;
+            return "";
+        }
+
         auto toWallet = getWallet(toWalletId);
         if (!toWallet || toWallet->getIsLocked()) {
             return "";

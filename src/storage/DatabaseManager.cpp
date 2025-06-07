@@ -141,11 +141,23 @@ bool DatabaseManager::createTables() {
         );
     )";
     
+    const char* otpTableSQL = R"(
+        CREATE TABLE IF NOT EXISTS otps (
+            user_id TEXT NOT NULL,
+            purpose TEXT NOT NULL,
+            otp_code TEXT NOT NULL,
+            expires_at INTEGER NOT NULL,
+            PRIMARY KEY (user_id, purpose),
+            FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
+        );
+    )";
+    
     const char* indexSQL = R"(
         CREATE INDEX IF NOT EXISTS idx_username ON users(username);
         CREATE INDEX IF NOT EXISTS idx_wallet_owner ON wallets(owner_id);
         CREATE INDEX IF NOT EXISTS idx_transaction_from ON transactions(from_wallet_id);
         CREATE INDEX IF NOT EXISTS idx_transaction_to ON transactions(to_wallet_id);
+        CREATE INDEX IF NOT EXISTS idx_otp_expires ON otps(expires_at);
     )";
     
     char* errMsg = nullptr;
@@ -170,6 +182,14 @@ bool DatabaseManager::createTables() {
     rc = sqlite3_exec(db, transactionTableSQL, nullptr, nullptr, &errMsg);
     if (rc != SQLITE_OK) {
         std::cerr << "Create transactions table error: " << errMsg << std::endl;
+        sqlite3_free(errMsg);
+        return false;
+    }
+    
+    // Create OTPs table
+    rc = sqlite3_exec(db, otpTableSQL, nullptr, nullptr, &errMsg);
+    if (rc != SQLITE_OK) {
+        std::cerr << "Create OTPs table error: " << errMsg << std::endl;
         sqlite3_free(errMsg);
         return false;
     }
