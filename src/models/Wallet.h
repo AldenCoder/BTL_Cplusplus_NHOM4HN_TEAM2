@@ -67,16 +67,6 @@ struct Transaction {
     static Transaction fromJson(const std::string& json);
 };
 
-/**
- * @class Wallet
- * @brief Reward points wallet management class
- * 
- * Each user has a wallet with the following features:
- * - Store points balance
- * - Execute point transfer transactions
- * - Store transaction history
- * - Verify transactions with OTP
- */
 class Wallet {
 protected:  // Changed from private to protected for inheritance
     std::string walletId;              // Unique wallet ID

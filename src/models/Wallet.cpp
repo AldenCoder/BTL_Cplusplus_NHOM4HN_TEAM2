@@ -5,8 +5,6 @@
 #include <iomanip>
 #include <algorithm>
 
-// ==================== Transaction Implementation ====================
-
 Transaction::Transaction(const std::string& fromId, const std::string& toId, 
                         double amt, TransactionType t, const std::string& desc)
     : fromWalletId(fromId), toWalletId(toId), amount(amt), type(t), 
@@ -45,21 +43,16 @@ std::string Transaction::toJson() const {
 }
 
 Transaction Transaction::fromJson(const std::string& json) {
-    (void)json; // Suppress unused parameter warning
-    // This is a simple implementation, in practice should use JSON library
-    // Temporarily create empty transaction
+    (void)json;
     Transaction t("", "", 0.0, TransactionType::TRANSFER_OUT);
     return t;
 }
-
-// ==================== Wallet Implementation ====================
 
 Wallet::Wallet(const std::string& walletId, const std::string& ownerId, 
                double initialBalance)
     : walletId(walletId), ownerId(ownerId), balance(initialBalance),
       createdAt(std::chrono::system_clock::now()), isLocked(false) {
     
-    // If there's initial balance, create initialization transaction
     if (initialBalance > 0) {
         Transaction initTransaction("SYSTEM", walletId, initialBalance, 
                                   TransactionType::INITIAL, 
@@ -92,19 +85,16 @@ bool Wallet::withdraw(double amount) {
 std::string Wallet::transferOut(double amount, const std::string& toWalletId, 
                                const std::string& description) {
     if (!hasSufficientBalance(amount)) {
-        return ""; // Insufficient balance or wallet locked
+        return "";
     }
     
-    // Create pending transaction
     Transaction transaction(walletId, toWalletId, amount, 
                           TransactionType::TRANSFER_OUT, description);
     
     std::string transactionId = transaction.transactionId;
     
-    // Temporarily subtract balance (will be confirmed with OTP)
     balance -= amount;
     
-    // Add to history
     addTransaction(transaction);
     
     return transactionId;
@@ -113,33 +103,27 @@ std::string Wallet::transferOut(double amount, const std::string& toWalletId,
 void Wallet::receiveTransfer(double amount, const std::string& fromWalletId,
                            const std::string& transactionId, 
                            const std::string& description) {
-    // Create receive points transaction
     Transaction transaction(fromWalletId, walletId, amount, 
                           TransactionType::TRANSFER_IN, description);
-    transaction.transactionId = transactionId; // Use ID from original transaction
+    transaction.transactionId = transactionId;
     transaction.status = TransactionStatus::COMPLETED;
     
-    // Add to balance
     balance += amount;
     
-    // Add to history
     addTransaction(transaction);
 }
 
 bool Wallet::cancelTransaction(const std::string& transactionId) {
-    // Find transaction
     auto it = std::find_if(transactions.begin(), transactions.end(),
         [&transactionId](const Transaction& t) {
             return t.transactionId == transactionId;
         });
     
     if (it != transactions.end() && it->status == TransactionStatus::PENDING) {
-        // If it's outgoing transaction, refund balance
         if (it->type == TransactionType::TRANSFER_OUT) {
             balance += it->amount;
         }
         
-        // Update status
         it->status = TransactionStatus::CANCELLED;
         return true;
     }
@@ -149,14 +133,12 @@ bool Wallet::cancelTransaction(const std::string& transactionId) {
 
 bool Wallet::confirmTransaction(const std::string& transactionId, 
                                const std::string& otpCode) {
-    // Find transaction
     auto it = std::find_if(transactions.begin(), transactions.end(),
         [&transactionId](const Transaction& t) {
             return t.transactionId == transactionId;
         });
     
     if (it != transactions.end() && it->status == TransactionStatus::PENDING) {
-        // Save used OTP
         it->otpUsed = otpCode;
         it->status = TransactionStatus::COMPLETED;
         return true;
@@ -209,7 +191,6 @@ std::string Wallet::toJson() const {
 
 std::unique_ptr<Wallet> Wallet::fromJson(const std::string& json) {
     try {
-        // Helper function to extract string value from JSON
         auto extractString = [&json](const std::string& key) -> std::string {
             std::string searchKey = "\"" + key + "\": \"";
             size_t start = json.find(searchKey);
@@ -220,7 +201,6 @@ std::unique_ptr<Wallet> Wallet::fromJson(const std::string& json) {
             return json.substr(start, end - start);
         };
         
-        // Helper function to extract numeric/boolean value from JSON
         auto extractValue = [&json](const std::string& key) -> std::string {
             std::string searchKey = "\"" + key + "\": ";
             size_t start = json.find(searchKey);
@@ -231,7 +211,6 @@ std::unique_ptr<Wallet> Wallet::fromJson(const std::string& json) {
             return json.substr(start, end - start);
         };
         
-        // Extract basic wallet info
         std::string walletId = extractString("walletId");
         std::string ownerId = extractString("ownerId");
         std::string balanceStr = extractValue("balance");
@@ -242,23 +221,19 @@ std::unique_ptr<Wallet> Wallet::fromJson(const std::string& json) {
         
         double balance = balanceStr.empty() ? 0.0 : std::stod(balanceStr);
         
-        // Create wallet object
         auto wallet = std::unique_ptr<Wallet>(new Wallet(walletId, ownerId, balance));
         
-        // Extract isLocked
         std::string isLockedStr = extractValue("isLocked");
         if (!isLockedStr.empty()) {
             wallet->setLocked(isLockedStr == "true");
         }
         
-        // Extract createdAt timestamp
         std::string createdAtStr = extractValue("createdAt");
         if (!createdAtStr.empty()) {
             auto createdTime = std::chrono::seconds(std::stoll(createdAtStr));
             wallet->createdAt = std::chrono::system_clock::time_point(createdTime);
         }
         
-        // Extract transactions (simplified - just clear the initial transaction)
         wallet->transactions.clear();
         
         return wallet;
@@ -276,20 +251,16 @@ std::string Wallet::generateTransactionId() {
 void Wallet::addTransaction(const Transaction& transaction) {
     transactions.push_back(transaction);
     
-    // Keep maximum 1000 most recent transactions
     if (transactions.size() > 1000) {
         transactions.erase(transactions.begin());
     }
 }
-
-// ==================== MasterWallet Implementation ====================
 
 const std::string MasterWallet::MASTER_WALLET_ID = "MASTER_WALLET_00";
 const std::string MasterWallet::MASTER_OWNER_ID = "SYSTEM";
 
 MasterWallet::MasterWallet(double initialSupply) 
     : Wallet(MASTER_WALLET_ID, MASTER_OWNER_ID, initialSupply) {
-    // Master wallet is never locked
     setLocked(false);
 }
 
@@ -299,15 +270,12 @@ std::string MasterWallet::issuePoints(const std::string& toWalletId, double amou
         return "";
     }
     
-    // Create points issuance transaction
     Transaction transaction(MASTER_WALLET_ID, toWalletId, amount,
                           TransactionType::TRANSFER_OUT, description);
-    transaction.status = TransactionStatus::COMPLETED; // No OTP needed for master wallet
+    transaction.status = TransactionStatus::COMPLETED;
     
-    // Subtract balance from master wallet
     balance -= amount;
     
-    // Add to history
     addTransaction(transaction);
     
     return transaction.transactionId;

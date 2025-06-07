@@ -144,6 +144,26 @@ public:
     std::string requestProfileUpdateOTP(const std::string& userId);
 
     /**
+     * @brief Request OTP for password change
+     * @param userId User ID
+     * @return OTP code (will be sent via email/SMS in real implementation)
+     */
+    std::string requestPasswordChangeOTP(const std::string& userId);
+
+    /**
+     * @brief Change password with OTP verification
+     * @param userId User ID
+     * @param oldPassword Old password
+     * @param newPassword New password
+     * @param otpCode OTP verification code
+     * @return true if successful
+     */
+    bool changePasswordWithOTP(const std::string& userId,
+                               const std::string& oldPassword,
+                               const std::string& newPassword,
+                               const std::string& otpCode);
+
+    /**
      * @brief Get current user information
      * @return Shared pointer to user
      */

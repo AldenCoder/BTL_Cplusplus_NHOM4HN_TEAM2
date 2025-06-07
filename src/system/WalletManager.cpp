@@ -453,26 +453,26 @@ void WalletManager::removeWalletFromCache(const std::string& walletId) {
 std::string WalletManager::validateTransferRequest(const TransferRequest& request) {
     // Kiểm tra số điểm
     if (request.amount <= 0) {
-        return "Số điểm phải lớn hơn 0!";
+        return "So diem phai lon hon 0!";
     }
 
     if (request.amount > 1000000) { // Giới hạn 1 triệu điểm/giao dịch
-        return "Số điểm vượt quá giới hạn cho phép!";
+        return "So diem vuot qua gioi han cho phep!";
     }
 
     // Kiểm tra ví gửi và nhận khác nhau
     if (request.fromWalletId == request.toWalletId) {
-        return "Không thể chuyển điểm cho chính mình!";
+        return "Khong the chuyen diem cho chinh minh!";
     }
 
     // Kiểm tra OTP
     if (request.otpCode.empty()) {
-        return "Cần mã OTP để xác thực giao dịch!";
+        return "Can ma OTP de xac thuc giao dich!";
     }
 
     // Kiểm tra mô tả
     if (request.description.empty()) {
-        return "Cần có mô tả cho giao dịch!";
+        return "Can co mo ta cho giao dich!";
     }
 
     return ""; // Hợp lệ
