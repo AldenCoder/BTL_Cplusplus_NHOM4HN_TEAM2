@@ -497,11 +497,24 @@ void UserInterface::transferPoints() {
         return;
     }
 
-    std::cout << "Recipient: " << recipient->getFullName() << "\n\n";
+    std::cout << "Recipient: " << recipient->getFullName() << "\n";
+    std::cout << "Your current balance: " << formatCurrency(fromWallet->getBalance()) << "\n\n";
 
-    // Enter transfer amount
-    double amount = getDoubleInput("Amount to transfer: ", 0.01, fromWallet->getBalance());
-    if (amount <= 0) return;    // Enter description
+    // Enter transfer amount with cancel option
+    bool cancelled = false;
+    double amount = getDoubleInputWithCancel("Amount to transfer: ", 0.01, fromWallet->getBalance(), cancelled);
+    
+    if (cancelled) {
+        showInfo("Transfer cancelled. Returning to menu...");
+        pauseScreen();
+        return;
+    }
+    
+    if (amount <= 0) {
+        showError("Invalid amount!");
+        pauseScreen();
+        return;
+    }    // Enter description
     std::string description = getInput("Transaction description: ");
     if (description.empty()) description = "Transfer points";
 
@@ -810,11 +823,43 @@ void UserInterface::issuePointsFromMaster() {
     std::cout << "Recipient: " << user->getFullName() << "\n";
     std::cout << "Current balance: " << formatCurrency(wallet->getBalance()) << "\n\n";
 
-    double amount = getDoubleInput("Points to issue: ", 0.01, 1000000.0);
-    if (amount <= 0) return;
+    bool cancelled = false;
+    double amount = getDoubleInputWithCancel("Points to issue: ", 0.01, 1000000.0, cancelled);
+    
+    if (cancelled) {
+        showInfo("Point issuance cancelled. Returning to menu...");
+        pauseScreen();
+        return;
+    }
+    
+    if (amount <= 0) {
+        showError("Invalid amount!");
+        pauseScreen();
+        return;
+    }
 
     std::string description = getInput("Reason for issuing: ");
     if (description.empty()) description = "Admin issued points";
+
+    // Create OTP for security
+    showInfo("Generating OTP code...");
+    auto currentUser = authSystem.getCurrentUser();
+    std::string otpCode = walletManager->generateTransferOTP(currentUser->getId(), wallet->getId(), amount);
+    if (otpCode.empty()) {
+        showError("Cannot generate OTP code!");
+        pauseScreen();
+        return;
+    }
+
+    showInfo("Your OTP code is: " + otpCode);
+    showInfo("(In reality, this code would be sent via email/SMS)");
+
+    // Confirm transaction details
+    std::cout << "\n" << "=== CONFIRM POINT ISSUANCE ===\n";
+    std::cout << "Administrator: " << currentUser->getFullName() << "\n";
+    std::cout << "Recipient: " << user->getFullName() << "\n";
+    std::cout << "Amount: " << formatCurrency(amount) << "\n";
+    std::cout << "Reason: " << description << "\n\n";
 
     if (!confirmAction("Are you sure you want to issue " + formatCurrency(amount) + " points?")) {
         showInfo("Operation cancelled!");
@@ -822,9 +867,17 @@ void UserInterface::issuePointsFromMaster() {
         return;
     }
 
+    std::string inputOTP = getInput("Enter OTP code: ");
+    if (inputOTP.empty()) {
+        showInfo("Operation cancelled!");
+        pauseScreen();
+        return;
+    }
+
     showInfo("Issuing points...");
     
-    std::string transactionId = walletManager->issuePointsFromMaster(wallet->getId(), amount, description);
+    std::string transactionId = walletManager->issuePointsFromMaster(
+        currentUser->getId(), wallet->getId(), amount, description, inputOTP);
     
     if (!transactionId.empty()) {
         showSuccess("Points issued successfully!");
@@ -1183,7 +1236,55 @@ double UserInterface::getDoubleInput(const std::string& prompt, double min, doub
         
         std::cin.clear();
         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        showError("Please enter a number from " + std::to_string(min) + " to " + std::to_string(max) + "!");
+        
+        // Better formatting for currency amounts
+        if (max < 1000000.0) {
+            showError("Please enter a number from " + formatCurrency(min) + " to " + formatCurrency(max) + "!");
+        } else {
+            showError("Please enter a number from " + std::to_string(min) + " to " + std::to_string(max) + "!");
+        }
+    }
+}
+
+double UserInterface::getDoubleInputWithCancel(const std::string& prompt, double min, double max, bool& cancelled) {
+    cancelled = false;
+    std::string input;
+    
+    while (true) {
+        std::cout << prompt;
+        std::cout << "(Enter 'c' or 'cancel' to return to menu): ";
+        
+        if (!std::getline(std::cin, input)) {
+            cancelled = true;
+            return 0.0;
+        }
+        
+        // Check for cancel commands
+        std::string lowerInput = input;
+        std::transform(lowerInput.begin(), lowerInput.end(), lowerInput.begin(), ::tolower);
+        if (lowerInput == "c" || lowerInput == "cancel" || lowerInput == "exit" || lowerInput == "back") {
+            cancelled = true;
+            return 0.0;
+        }
+        
+        // Try to parse as number
+        try {
+            double value = std::stod(input);
+            if (value >= min && value <= max) {
+                return value;
+            }
+            
+            // Better formatting for currency amounts  
+            if (max < 1000000.0) {
+                showError("Please enter a number from " + formatCurrency(min) + " to " + formatCurrency(max) + "!");
+            } else {
+                showError("Please enter a number from " + std::to_string(min) + " to " + std::to_string(max) + "!");
+            }
+        } catch (const std::exception&) {
+            showError("Please enter a valid number!");
+        }
+        
+        showInfo("Type 'c' or 'cancel' to return to the menu.");
     }
 }
 

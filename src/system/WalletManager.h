@@ -158,14 +158,18 @@ public:
 
     /**
      * @brief Phát hành điểm từ ví tổng (chỉ admin)
+     * @param adminUserId ID admin thực hiện
      * @param toWalletId ID ví nhận
      * @param amount Số điểm
      * @param description Mô tả
+     * @param otpCode Mã OTP xác thực
      * @return ID giao dịch nếu thành công
      */
-    std::string issuePointsFromMaster(const std::string& toWalletId,
+    std::string issuePointsFromMaster(const std::string& adminUserId,
+                                     const std::string& toWalletId,
                                      double amount,
-                                     const std::string& description = "Admin issued points");
+                                     const std::string& description,
+                                     const std::string& otpCode);
 
     /**
      * @brief Lấy thống kê tổng quan hệ thống ví

@@ -238,6 +238,16 @@ private:
     double getDoubleInput(const std::string& prompt, double min = 0.0, double max = 1000000.0);
 
     /**
+     * @brief Read decimal number from input with cancellation option
+     * @param prompt Prompt message
+     * @param min Minimum value
+     * @param max Maximum value
+     * @param cancelled Reference to bool that will be set to true if user cancels
+     * @return Decimal number entered (0 if cancelled)
+     */
+    double getDoubleInputWithCancel(const std::string& prompt, double min, double max, bool& cancelled);
+
+    /**
      * @brief Confirm action
      * @param message Confirmation message
      * @return true if user confirms
