@@ -19,6 +19,7 @@ SOURCES = $(SRCDIR)/main.cpp \
           $(SRCDIR)/security/OTPManager.cpp \
           $(SRCDIR)/security/SecurityUtils.cpp \
           $(SRCDIR)/storage/DatabaseManager.cpp \
+          $(SRCDIR)/storage/OTPStorage.cpp \
           $(SRCDIR)/system/AuthSystem.cpp \
           $(SRCDIR)/system/WalletManager.cpp \
           $(SRCDIR)/ui/UserInterface.cpp

@@ -22,6 +22,7 @@ $sources = @(
     "src\security\OTPManager.cpp",
     "src\security\SecurityUtils.cpp",
     "src\storage\DatabaseManager.cpp",
+    "src\storage\OTPStorage.cpp",
     "src\system\AuthSystem.cpp",
     "src\system\WalletManager.cpp",
     "src\ui\UserInterface.cpp",
