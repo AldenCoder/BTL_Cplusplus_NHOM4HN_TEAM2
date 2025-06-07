@@ -4,8 +4,7 @@
 #include <iomanip>
 #include <sstream>
 #include <regex>
-// #include <conio.h>  // For Windows
-#include <termios.h>  // For macOS/Linux
+ #include <conio.h>  // For Windows// For macOS/Linux
 #include <unistd.h>
 // #include <sys/ioctl.h>
 #include <limits>
@@ -1086,7 +1085,7 @@ std::string UserInterface::getPassword(const std::string& prompt) {
     std::cout << prompt;
     std::string password;
     char ch;
-    
+
     while ((ch = getch()) != '\r' && ch != '\n') { // Support both \r and \n
         if (ch == '\b' || ch == 127) { // Backspace (127 is DEL on some systems)
             if (!password.empty()) {
