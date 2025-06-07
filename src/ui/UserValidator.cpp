@@ -53,16 +53,21 @@ bool UserValidator::isValidPhoneNumber(const std::string& phone) {
 }
 
 
-bool UserValidator::validateStrongPassword(const std::string& password) {
-    if (password.length() < 8) return false;
+std::string UserValidator::validateStrongPassword(const std::string& password) {
+    if (password.length() < 8) return "Password must be at least 8 characters long.";
 
     std::regex lowercase("[a-z]");
     std::regex uppercase("[A-Z]");
     std::regex digit("[0-9]");
     std::regex special("[^a-zA-Z0-9]");
 
-    return std::regex_search(password, lowercase) &&
-           std::regex_search(password, uppercase) &&
-           std::regex_search(password, digit) &&
-           std::regex_search(password, special);
+    if (!std::regex_search(password, lowercase)) return "Password must contain at least one lowercase letter.";
+
+    if (!std::regex_search(password, uppercase)) return "Password must contain at least one uppercase letter.";
+
+    if (!std::regex_search(password, digit)) return "Password must contain at least one digit.";
+
+    if (!std::regex_search(password, special)) return "Password must contain at least one special character.";
+
+    return "";
 }
