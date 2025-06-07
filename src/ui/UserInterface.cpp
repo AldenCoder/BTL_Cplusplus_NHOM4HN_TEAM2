@@ -317,7 +317,7 @@ void UserInterface::registerScreen() {
 
     // Validate password
     std::string password = getValidatedInput(
-        "Password (at least 8 characters): ",
+        "Password (at least 8 characters, At least one Uppercase, Lowercase, Digit, Special Character): ",
         UserValidator::validateStrongPassword,
         "Weak password! Please enter a stronger password.",
         true
@@ -395,7 +395,7 @@ void UserInterface::changePassword() {
     );
     // Validate password
     std::string newPassword = getValidatedInput(
-        "New Password (at least 8 characters): ",
+        "New Password (at least 8 characters, At least one Uppercase, Lowercase, Digit, Special Character): ",
         UserValidator::validateStrongPassword,
         "Weak password! Please enter a stronger password.",
         true
