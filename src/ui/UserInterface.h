@@ -3,7 +3,7 @@
 
 #include "../system/AuthSystem.h"
 #include "../system/WalletManager.h"
-#include "../storage/DataManager.h"
+#include "../storage/DatabaseManager.h"
 #include <iostream>
 #include <string>
 #include <memory>
@@ -136,6 +136,31 @@ private:
     void viewAllUsers();
 
     /**
+     * @brief Search user by username
+     */
+    void searchUserByUsername();
+
+    /**
+     * @brief Create new user account (admin)
+     */
+    void createNewUserAccount();
+
+    /**
+     * @brief Edit user information
+     */
+    void editUserInformation();
+
+    /**
+     * @brief Reset user password
+     */
+    void resetUserPassword();
+
+    /**
+     * @brief View user wallet details
+     */
+    void viewUserWalletDetails();
+
+    /**
      * @brief Create new account (admin)
      */
     void createNewAccount();
@@ -213,6 +238,16 @@ private:
     double getDoubleInput(const std::string& prompt, double min = 0.0, double max = 1000000.0);
 
     /**
+     * @brief Read decimal number from input with cancellation option
+     * @param prompt Prompt message
+     * @param min Minimum value
+     * @param max Maximum value
+     * @param cancelled Reference to bool that will be set to true if user cancels
+     * @return Decimal number entered (0 if cancelled)
+     */
+    double getDoubleInputWithCancel(const std::string& prompt, double min, double max, bool& cancelled);
+
+    /**
      * @brief Confirm action
      * @param message Confirmation message
      * @return true if user confirms
@@ -259,20 +294,7 @@ private:
     /**
      * @brief Show separator
      */
-    void showSeparator();    /**
-     * @brief Validate email
-     * @param email Email to check
-     * @return true if email is valid
-     */
-    bool isValidEmail(const std::string& email);
-
-    /**
-     * @brief Validate phone number
-     * @param phone Phone number to check
-     * @return true if phone number is valid
-     */
-    bool isValidPhoneNumber(const std::string& phone);
-
+    void showSeparator();    
     /**
      * @brief Format currency display
      * @param amount Amount
@@ -284,6 +306,13 @@ private:
      * @return Formatted time string
      */
     std::string formatDateTime(const std::chrono::system_clock::time_point& timePoint);
+
+    /**
+     * @brief Format date display (date only)
+     * @param timePoint Time point
+     * @return Formatted date string
+     */
+    std::string formatDate(const std::chrono::system_clock::time_point& timePoint);
 
     /**
      * @brief Format file size display
@@ -311,6 +340,10 @@ private:
      * @return User's choice (1-based index)
      */
     int showMenuSelection(const std::string& title, const std::vector<std::string>& options);
+
+    // Helper template to reduce duplicate input-validation code
+    template<typename Validator>
+    std::string getValidatedInput(const std::string& prompt, Validator validator, const std::string& errorMsg = "", bool isSensitive = false, int maxAttempts = 3);
 };
 
 #endif // USER_INTERFACE_H

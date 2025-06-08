@@ -2,7 +2,7 @@
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -O2 -g
 INCLUDES = -Isrc
-LDFLAGS =
+LDFLAGS = -lsqlite3
 
 # Thư mục
 SRCDIR = src
@@ -18,21 +18,22 @@ SOURCES = $(SRCDIR)/main.cpp \
           $(SRCDIR)/models/Wallet.cpp \
           $(SRCDIR)/security/OTPManager.cpp \
           $(SRCDIR)/security/SecurityUtils.cpp \
-          $(SRCDIR)/storage/DataManager.cpp \
+          $(SRCDIR)/storage/DatabaseManager.cpp \
+          $(SRCDIR)/storage/OTPStorage.cpp \
           $(SRCDIR)/system/AuthSystem.cpp \
           $(SRCDIR)/system/WalletManager.cpp \
           $(SRCDIR)/ui/UserInterface.cpp
 
 OBJECTS = $(SOURCES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)
 
-# Tạo thư mục nếu chưa tồn tại (Windows compatible)
-$(shell if not exist $(OBJDIR) mkdir $(OBJDIR))
-$(shell if not exist $(BINDIR) mkdir $(BINDIR))
-$(shell if not exist $(OBJDIR)\models mkdir $(OBJDIR)\models)
-$(shell if not exist $(OBJDIR)\security mkdir $(OBJDIR)\security)
-$(shell if not exist $(OBJDIR)\storage mkdir $(OBJDIR)\storage)
-$(shell if not exist $(OBJDIR)\system mkdir $(OBJDIR)\system)
-$(shell if not exist $(OBJDIR)\ui mkdir $(OBJDIR)\ui)
+# Tạo thư mục nếu chưa tồn tại (Unix/macOS compatible)
+$(shell mkdir -p $(OBJDIR))
+$(shell mkdir -p $(BINDIR))
+$(shell mkdir -p $(OBJDIR)/models)
+$(shell mkdir -p $(OBJDIR)/security)
+$(shell mkdir -p $(OBJDIR)/storage)
+$(shell mkdir -p $(OBJDIR)/system)
+$(shell mkdir -p $(OBJDIR)/ui)
 
 # Rule mặc định
 all: $(TARGET)
@@ -51,8 +52,8 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 # Clean build files
 clean:
 	@echo "Cleaning build files..."
-	-@if exist $(OBJDIR) rmdir /s /q $(OBJDIR)
-	-@if exist $(BINDIR) rmdir /s /q $(BINDIR)
+	-@rm -rf $(OBJDIR)
+	-@rm -rf $(BINDIR)
 	@echo "Clean completed!"
 
 # Rebuild everything
@@ -105,4 +106,4 @@ $(OBJDIR)/%.d: $(SRCDIR)/%.cpp
 	@set -e; rm -f $@; \
 	$(CXX) -M $(CXXFLAGS) $(INCLUDES) $< > $@.$$$$; \
 	sed 's,\($*\)\.o[ :]*,$(OBJDIR)/\1.o $@ : ,g' < $@.$$$$ > $@; \
-	rm -f $@.$$$$
+	rm -f $@.$$$$ 

@@ -1,0 +1,6 @@
+sqlite/* linguist-vendored
+*.cpp linguist-language=C++
+*.h linguist-language=C++
+sqlite/sqlite-amalgamation-3460100/sqlite3.h linguist-vendored
+sqlite/sqlite-amalgamation-3460100/sqlite3.c linguist-vendored
+sqlite/sqlite-amalgamation-3460100/shell.c linguist-vendored
