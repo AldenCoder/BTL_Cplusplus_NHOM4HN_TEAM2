@@ -5,6 +5,7 @@
 #include <iomanip>
 #include <iostream>
 
+// Khởi tạo người dùng mặc định
 User::User(const std::string& id, const std::string& username, const std::string& passwordHash,
            const std::string& fullName, const std::string& email,
            const std::string& phoneNumber, UserRole role)
@@ -16,6 +17,7 @@ User::User(const std::string& id, const std::string& username, const std::string
     walletId = "";
 }
 
+// Kiểm tra mật khẩu
 bool User::verifyPassword(const std::string& password) const {
     return SecurityUtils::verifyPassword(password, passwordHash);
 }
@@ -26,6 +28,7 @@ void User::changePassword(const std::string& newPassword) {
     isFirstLogin = false;
 }
 
+//Chuyển đổi đối tượng User thành chuỗi JSON
 std::string User::toJson() const {
     std::ostringstream json;
     
@@ -40,7 +43,7 @@ std::string User::toJson() const {
     json << "  \"isPasswordGenerated\": " << (isPasswordGenerated ? "true" : "false") << ",\n";
     json << "  \"isFirstLogin\": " << (isFirstLogin ? "true" : "false") << ",\n";    json << "  \"walletId\": \"" << walletId << "\",\n";
     
-    // Convert time to timestamp
+    // Chuyển đổi thời gian thành giây 
     auto createdTime = std::chrono::duration_cast<std::chrono::seconds>(
         createdAt.time_since_epoch()).count();
     auto lastLoginTime = std::chrono::duration_cast<std::chrono::seconds>(
@@ -53,9 +56,10 @@ std::string User::toJson() const {
     return json.str();
 }
 
+// Tạo đối tượng User từ chuỗi JSON
 std::unique_ptr<User> User::fromJson(const std::string& json) {
     try {
-        // Simple JSON parser - find necessary fields
+        // Tìm kiếm key trong chuỗi JSON
         auto user = std::unique_ptr<User>(new User());
         
         auto extractString = [&json](const std::string& key) -> std::string {
@@ -76,6 +80,7 @@ std::unique_ptr<User> User::fromJson(const std::string& json) {
             if (end == std::string::npos) return "";
             return json.substr(start, end - start);        };
         
+        // Trích xuất và gán giá trị cho các trường của đối tượng User
         // Extract fields
         user->userId = extractString("userId");
         user->username = extractString("username");
@@ -118,16 +123,16 @@ std::unique_ptr<User> User::fromJson(const std::string& json) {
     }
 }
 
+// Sinh ID người dùng
 std::string User::generateUserId() {
     return SecurityUtils::generateUUID();
 }
-
+// Sinh ID ví người dùng
 std::string User::generateWalletId() {
-    // Return full UUID for consistency
     return SecurityUtils::generateUUID();
 }
 
-// Implement setWallet method
+// Gán ID ví cho người dùng
 void User::setWallet(std::shared_ptr<class Wallet> wallet) {
     if (wallet) {
         walletId = wallet->getWalletId();
