@@ -133,23 +133,23 @@ TransferResult WalletManager::transferPoints(const TransferRequest& request) {
         auto toWallet = getWallet(request.toWalletId);
 
         if (!fromWallet || !toWallet) {
-            result.message = "Không tìm thấy ví!";
+            result.message = "Wallet not found.!";
             return result;
         }        // Kiểm tra ví có bị khóa không
         if (fromWallet->getIsLocked() || toWallet->getIsLocked()) {
-            result.message = "Ví đã bị khóa!";
+            result.message = "The wallet has been locked!";
             return result;
         }
 
         // Kiểm tra số dư
         if (fromWallet->getBalance() < request.amount) {
-            result.message = "Số dư không đủ!";
+            result.message = "Insufficient balance!";
             return result;
         }
 
         // Xác thực OTP
         if (!otpManager->verifyOTP(fromWallet->getOwnerId(), request.otpCode, OTPType::TRANSFER)) {
-            result.message = "Mã OTP không đúng hoặc đã hết hạn!";
+            result.message = "The OTP code is incorrect or has expired!";
             return result;
         }
 
@@ -159,7 +159,7 @@ TransferResult WalletManager::transferPoints(const TransferRequest& request) {
 
         if (!transactionId.empty()) {
             result.success = true;
-            result.message = "Chuyển điểm thành công!";
+            result.message = "Points transferred successfully!";
             result.transactionId = transactionId;
             result.newBalance = fromWallet->getBalance();
 
@@ -167,11 +167,11 @@ TransferResult WalletManager::transferPoints(const TransferRequest& request) {
             dataManager->saveWallet(fromWallet);
             dataManager->saveWallet(toWallet);
         } else {
-            result.message = "Loi thuc hien giao dich!";
+            result.message = "Transaction execution error!";
         }
     }
     catch (const std::exception& e) {
-        result.message = "Loi he thong: " + std::string(e.what());
+        result.message = "System error: " + std::string(e.what());
     }
 
     return result;
@@ -186,7 +186,7 @@ std::string WalletManager::generateTransferOTP(const std::string& fromUserId,
         return otpManager->generateOTP(fromUserId, OTPType::TRANSFER);
     }
     catch (const std::exception& e) {
-        std::cerr << "Loi tao OTP chuyen diem: " << e.what() << std::endl;
+        std::cerr << "Error generating OTP for point transfer: " << e.what() << std::endl;
         return "";
     }
 }
