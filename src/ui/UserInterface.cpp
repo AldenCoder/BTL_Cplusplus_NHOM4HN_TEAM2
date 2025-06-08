@@ -1316,7 +1316,7 @@ std::string UserInterface::getPassword(const std::string& prompt) {
     std::cout << prompt;
     std::string password;
     char ch;
-    
+
     while ((ch = getch()) != '\r' && ch != '\n') { // Support both \r and \n
         if (ch == '\b' || ch == 127) { // Backspace (127 is DEL on some systems)
             if (!password.empty()) {
