@@ -1,18 +1,14 @@
-# Compiler và flags
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -O2 -g
 INCLUDES = -Isrc
 LDFLAGS = -lsqlite3
 
-# Thư mục
 SRCDIR = src
 OBJDIR = obj
 BINDIR = bin
 
-# File thực thi
 TARGET = $(BINDIR)/wallet_system
 
-# Liệt kê tất cả file .cpp
 SOURCES = $(SRCDIR)/main.cpp \
           $(SRCDIR)/models/User.cpp \
           $(SRCDIR)/models/Wallet.cpp \
@@ -22,11 +18,11 @@ SOURCES = $(SRCDIR)/main.cpp \
           $(SRCDIR)/storage/OTPStorage.cpp \
           $(SRCDIR)/system/AuthSystem.cpp \
           $(SRCDIR)/system/WalletManager.cpp \
-          $(SRCDIR)/ui/UserInterface.cpp
+          $(SRCDIR)/ui/UserInterface.cpp \
+          $(SRCDIR)/ui/UserValidator.cpp
 
 OBJECTS = $(SOURCES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)
 
-# Tạo thư mục nếu chưa tồn tại (Unix/macOS compatible)
 $(shell mkdir -p $(OBJDIR))
 $(shell mkdir -p $(BINDIR))
 $(shell mkdir -p $(OBJDIR)/models)
@@ -35,55 +31,44 @@ $(shell mkdir -p $(OBJDIR)/storage)
 $(shell mkdir -p $(OBJDIR)/system)
 $(shell mkdir -p $(OBJDIR)/ui)
 
-# Rule mặc định
 all: $(TARGET)
 
-# Rule build executable
 $(TARGET): $(OBJECTS)
 	@echo "Linking executable..."
 	$(CXX) $(OBJECTS) -o $@ $(LDFLAGS)
 	@echo "Build completed successfully!"
 
-# Rule build object files
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 	@echo "Compiling $<..."
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
-# Clean build files
 clean:
 	@echo "Cleaning build files..."
 	-@rm -rf $(OBJDIR)
 	-@rm -rf $(BINDIR)
 	@echo "Clean completed!"
 
-# Rebuild everything
 rebuild: clean all
 
-# Run the program
 run: $(TARGET)
 	@echo "Running the program..."
 	./$(TARGET)
 
-# Debug build
 debug: CXXFLAGS += -DDEBUG -g3
 debug: $(TARGET)
 
-# Release build
 release: CXXFLAGS += -DNDEBUG -O3
 release: $(TARGET)
 
-# Install dependencies (Ubuntu/Debian)
 install-deps:
 	@echo "Installing dependencies..."
 	sudo apt-get update
 	sudo apt-get install -y build-essential libssl-dev
 
-# Create data directories
 setup-dirs:
 	@echo "Creating data directories..."
 	mkdir -p data backup logs
 
-# Show help
 help:
 	@echo "Available targets:"
 	@echo "  all         - Build the project (default)"
@@ -96,10 +81,8 @@ help:
 	@echo "  setup-dirs  - Create necessary directories"
 	@echo "  help        - Show this help message"
 
-# Phony targets
 .PHONY: all clean rebuild run debug release install-deps setup-dirs help
 
-# Dependency tracking
 -include $(OBJECTS:.o=.d)
 
 $(OBJDIR)/%.d: $(SRCDIR)/%.cpp

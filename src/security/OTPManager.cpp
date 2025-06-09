@@ -149,7 +149,6 @@ std::string OTPManager::generatePasswordChangeOTP(const std::string& userId) {
     std::cout << "\n=== OTP CODE FOR PASSWORD CHANGE ===\n";
     std::cout << "OTP code for password change: " << otp << "\n";
     std::cout << "This code is valid for 5 minutes.\n";
-    std::cout << "For security, this would normally be sent to your registered email/SMS.\n";
     std::cout << "====================================\n\n";
     
     return otp;

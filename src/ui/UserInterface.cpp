@@ -326,7 +326,7 @@ void UserInterface::registerScreen() {
 
     std::string confirmPassword = getValidatedInput(
         "Confirm password: ",
-        [this, password](const std::string& u) { 
+        [password](const std::string& u) { 
             if (u != password) {
                 return "Password confirmation does not match!";
             }
@@ -384,7 +384,7 @@ void UserInterface::changePassword() {
     
     std::string oldPassword = getValidatedInput(
         "Current Password: ",
-        [this, user](const std::string& p) { 
+        [user](const std::string& p) { 
             if (!SecurityUtils::verifyPassword(p, user->getPasswordHash())) {
                 return "Incorrect current password!";
             }
@@ -404,7 +404,7 @@ void UserInterface::changePassword() {
 
     std::string confirmPassword = getValidatedInput(
         "Confirm new password: ",
-        [this, newPassword](const std::string& u) { 
+        [newPassword](const std::string& u) { 
             if (u != newPassword) {
                 return "Password confirmation does not match!";
             }
@@ -422,9 +422,6 @@ void UserInterface::changePassword() {
         pauseScreen();
         return;
     }
-
-    showInfo("Your OTP code is: " + otpCode);
-    showInfo("(In reality, this code would be sent via email/SMS)");
     
     // Confirm password change details
     std::cout << "\n" << "=== CONFIRM PASSWORD CHANGE ===\n";
@@ -496,9 +493,6 @@ void UserInterface::updateProfile() {
         pauseScreen();
         return;
     }
-
-    showInfo("Your OTP code is: " + otpCode);
-    showInfo("(In reality, this code would be sent via email/SMS)");
     
     std::string inputOTP = getInput("Enter OTP code: ");
     if (inputOTP.empty()) return;
@@ -606,8 +600,6 @@ void UserInterface::transferPoints() {
         return;
     }
 
-    showInfo("Your OTP code is: " + otpCode);
-    showInfo("(In reality, this code would be sent via email/SMS)");    // Confirm transaction details
     std::cout << "\n" << "=== CONFIRM TRANSACTION ===\n";
     std::cout << "From: " << user->getFullName() << "\n";
     std::cout << "To: " << recipient->getFullName() << "\n";
@@ -936,9 +928,6 @@ void UserInterface::issuePointsFromMaster() {
         pauseScreen();
         return;
     }
-
-    showInfo("Your OTP code is: " + otpCode);
-    showInfo("(In reality, this code would be sent via email/SMS)");
 
     // Confirm transaction details
     std::cout << "\n" << "=== CONFIRM POINT ISSUANCE ===\n";
