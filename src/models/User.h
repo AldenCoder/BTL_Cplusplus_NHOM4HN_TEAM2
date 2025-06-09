@@ -6,11 +6,13 @@
 #include <memory>
 #include <chrono>
 
-
+// Khai báo enum cho vai trò người dùng
 enum class UserRole {
     REGULAR,
     ADMIN
 };
+
+// Khai báo class User
 class User {
 private:
     std::string userId;

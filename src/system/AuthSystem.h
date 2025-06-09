@@ -225,11 +225,6 @@ public:
      */
     bool saveUser(std::shared_ptr<User> user);
 
-    /**
-     * @brief Create default admin account (if not exists)
-     */
-    void createDefaultAdmin();
-
 private:
     /**
      * @brief Validate registration data
