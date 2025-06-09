@@ -22,7 +22,8 @@ SOURCES = $(SRCDIR)/main.cpp \
           $(SRCDIR)/storage/OTPStorage.cpp \
           $(SRCDIR)/system/AuthSystem.cpp \
           $(SRCDIR)/system/WalletManager.cpp \
-          $(SRCDIR)/ui/UserInterface.cpp
+          $(SRCDIR)/ui/UserInterface.cpp \
+          $(SRCDIR)/ui/UserValidator.cpp
 
 OBJECTS = $(SOURCES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)
 

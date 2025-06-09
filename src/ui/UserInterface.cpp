@@ -326,7 +326,7 @@ void UserInterface::registerScreen() {
 
     std::string confirmPassword = getValidatedInput(
         "Confirm password: ",
-        [this, password](const std::string& u) { 
+        [password](const std::string& u) { 
             if (u != password) {
                 return "Password confirmation does not match!";
             }
@@ -384,7 +384,7 @@ void UserInterface::changePassword() {
     
     std::string oldPassword = getValidatedInput(
         "Current Password: ",
-        [this, user](const std::string& p) { 
+        [user](const std::string& p) { 
             if (!SecurityUtils::verifyPassword(p, user->getPasswordHash())) {
                 return "Incorrect current password!";
             }
@@ -404,7 +404,7 @@ void UserInterface::changePassword() {
 
     std::string confirmPassword = getValidatedInput(
         "Confirm new password: ",
-        [this, newPassword](const std::string& u) { 
+        [newPassword](const std::string& u) { 
             if (u != newPassword) {
                 return "Password confirmation does not match!";
             }
