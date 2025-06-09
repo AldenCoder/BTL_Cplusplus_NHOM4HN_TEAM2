@@ -86,11 +86,6 @@ public:
     bool saveUser(std::shared_ptr<User> user);
 
 private:
-    /**
-     * @brief Load user into cache
-     * @param username Login username
-     * @return Shared pointer to user
-     */
     std::shared_ptr<User> loadUserToCache(const std::string& username);
     void removeUserFromCache(const std::string& username);
 };

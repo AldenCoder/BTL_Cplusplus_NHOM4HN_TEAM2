@@ -6,13 +6,11 @@
 #include <memory>
 #include <chrono>
 
-// Khai báo enum cho vai trò người dùng
 enum class UserRole {
     REGULAR,
     ADMIN
 };
 
-// Khai báo class User
 class User {
 private:
     std::string userId;
@@ -34,7 +32,7 @@ public:
 
     User(const std::string& id, const std::string& username, const std::string& passwordHash,
         const std::string& fullName, const std::string& email,
-        const std::string& phoneNumber, UserRole role = UserRole::REGULAR);// Getter methods
+        const std::string& phoneNumber, UserRole role = UserRole::REGULAR);
     const std::string& getId() const { return userId; }
     const std::string& getUserId() const { return userId; }
     const std::string& getUsername() const { return username; }
@@ -46,11 +44,10 @@ public:
     bool getIsFirstLogin() const { return isFirstLogin; }
     const std::string& getWalletId() const { return walletId; }
     const std::chrono::system_clock::time_point& getCreatedAt() const { return createdAt; }
-    const std::chrono::system_clock::time_point& getLastLogin() const { return lastLogin; }    // Additional getter methods
+    const std::chrono::system_clock::time_point& getLastLogin() const { return lastLogin; }   
     bool requirePasswordChange() const { return isPasswordGenerated || isFirstLogin; }
-    bool isActive() const { return true; } // Placeholder - can be extended with account lock status
+    bool isActive() const { return true; } 
 
-    // Setter methods (only allow changing certain fields)
     void setFullName(const std::string& name) { fullName = name; }
     void setEmail(const std::string& newEmail) { email = newEmail; }
     void setPhoneNumber(const std::string& phone) { phoneNumber = phone; }
@@ -59,10 +56,8 @@ public:
     void setIsPasswordGenerated(bool generated) { isPasswordGenerated = generated; }    void setIsFirstLogin(bool firstLogin) { isFirstLogin = firstLogin; }
     void updateLastLogin() { lastLogin = std::chrono::system_clock::now(); }
     
-    // Wallet management
     void setWalletId(const std::string& id) { walletId = id; }
     
-    // Forward declaration can't access Wallet methods, implementation in .cpp
     void setWallet(std::shared_ptr<class Wallet> wallet);
     bool verifyPassword(const std::string& password) const;
     void changePassword(const std::string& newPassword);
