@@ -124,19 +124,6 @@ RegistrationResult AuthSystem::createAccount(const std::string& username,
         return result;
     }
 
-    // Validate input
-    std::string validationError = validateRegistrationData(username, email, phoneNumber);
-    if (!validationError.empty()) {
-        result.message = validationError;
-        return result;
-    }
-
-    // Check if username exists
-    if (isUsernameExists(username)) {
-        result.message = "Username already exists!";
-        return result;
-    }
-
     try {        std::string password;
         if (autoGeneratePassword) {
             password = SecurityUtils::generateRandomString(12);
@@ -479,34 +466,6 @@ bool AuthSystem::saveUser(std::shared_ptr<User> user) {
     }
 }
 
-std::string AuthSystem::validateRegistrationData(const std::string& username,
-                                                const std::string& email,
-                                                const std::string& phoneNumber) {
-    // Kiểm tra username
-    if (username.length() < 3 || username.length() > 20) {
-        return "Username must be 3-20 characters long!";
-    }
-
-    std::regex usernameRegex("^[a-zA-Z0-9_]+$");
-    if (!std::regex_match(username, usernameRegex)) {
-        return "Username can only contain letters, numbers, and underscores!";
-    }
-
-    // Check email
-    std::regex emailRegex(R"([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})");
-    if (!std::regex_match(email, emailRegex)) {
-        return "Invalid email format!";
-    }
-
-    // Check phone number
-    std::regex phoneRegex(R"(^[0-9]{10,11}$)");
-    if (!std::regex_match(phoneNumber, phoneRegex)) {
-        return "Phone number must be 10-11 digits!";
-    }
-
-    return ""; // Hợp lệ
-}
-
 // Load user vào cache nếu chưa có
 std::shared_ptr<User> AuthSystem::loadUserToCache(const std::string& username) {
     try {
@@ -519,7 +478,7 @@ std::shared_ptr<User> AuthSystem::loadUserToCache(const std::string& username) {
         return nullptr;
     }
     catch (const std::exception& e) {
-        std::cerr << "Loi tai user vao cache: " << e.what() << std::endl;
+        std::cerr << "Error loading user into cache: " << e.what() << std::endl;
         return nullptr;
     }
 }

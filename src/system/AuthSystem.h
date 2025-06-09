@@ -227,17 +227,6 @@ public:
 
 private:
     /**
-     * @brief Validate registration data
-     * @param username Login username
-     * @param email Email
-     * @param phoneNumber Phone number
-     * @return Error string (empty if valid)
-     */
-    std::string validateRegistrationData(const std::string& username,
-                                        const std::string& email,
-                                        const std::string& phoneNumber);
-
-    /**
      * @brief Load user into cache
      * @param username Login username
      * @return Shared pointer to user

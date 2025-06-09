@@ -295,7 +295,7 @@ void UserInterface::registerScreen() {
     std::string fullName = getValidatedInput(
         "Full name( < 30 characters):",
         UserValidator::isValidFullName,
-        "Invalid full name! Must be < 30 characters long."
+        "Invalid full name! Full name must contain only alphabetic characters and be less than 30 characters long."
     );
     if (fullName.empty()) return;
 
@@ -468,7 +468,7 @@ void UserInterface::updateProfile() {
     std::string newFullName = getValidatedInput(
         "New full name (Enter to keep current): ",
         UserValidator::isValidFullName,
-        "Invalid full name! Must be < 30 characters long."
+        "Invalid full name! Full name must contain only alphabetic characters and be less than 30 characters long."
     );
     if (newFullName.empty()) newFullName = user->getFullName();
 
@@ -779,7 +779,7 @@ void UserInterface::createNewAccount() {
     std::string fullName = getValidatedInput(
         "Full name( < 30 characters):",
         UserValidator::isValidFullName,
-        "Invalid full name! Must be < 30 characters long."
+        "Invalid full name! Full name must contain only alphabetic characters and be less than 30 characters long."
     );
     if (fullName.empty()) return;
 
