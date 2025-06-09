@@ -4,19 +4,14 @@
 #include <locale>
 
 int main() {
-      try {
-        // Initialize authentication system
+    try {
         AuthSystem authSystem;
-        
-        // Initialize user interface
         UserInterface ui(authSystem);
         
-        // Display startup information
         std::cout << "=================================================\n";
-        std::cout << "    LOGIN AND WALLET POINT MANAGEMENT SYSTEM    \n";
+        std::cout << "    LOGIN AND WALLET POINT MANAGEMENT SYSTEM     \n";
         std::cout << "=================================================\n\n";
         
-        // Run main interface
         ui.run();
         
     } catch (const std::exception& e) {

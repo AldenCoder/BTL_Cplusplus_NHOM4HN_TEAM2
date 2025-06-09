@@ -108,6 +108,8 @@ project/
 # Cài sqlite
 .\build.ps1
 .\bin\wallet_system.exe
+or
+g++ -std=c++17 -Wall -Wextra -O2 -Isrc src/main.cpp src/models/User.cpp src/models/Wallet.cpp src/security/OTPManager.cpp src/security/SecurityUtils.cpp src/storage/DatabaseManager.cpp src/storage/OTPStorage.cpp src/system/AuthSystem.cpp src/system/WalletManager.cpp src/ui/UserInterface.cpp src/ui/UserValidator.cpp -lsqlite3 -o run  
 ```
 
 #### **macOS**
