@@ -851,10 +851,9 @@ void UserInterface::manageUserAccount() {
         
         std::cout << " 1. View All Users\n";
         std::cout << " 2. Search User by Username\n";
-        std::cout << " 3. Create New Account\n";
-        std::cout << " 4. Edit User Information\n";
-        std::cout << " 5. Reset User Password\n";
-        std::cout << " 6. View User Wallet Details\n";
+        std::cout << " 3. Edit User Information\n";
+        std::cout << " 4. Reset User Password\n";
+        std::cout << " 5. View User Wallet Details\n";
         std::cout << " 0. Return to Main Menu\n\n";
         
         int choice = getIntInput("Choose function: ", 0, 6);
@@ -862,10 +861,9 @@ void UserInterface::manageUserAccount() {
         switch (choice) {
             case 1: viewAllUsers(); break;
             case 2: searchUserByUsername(); break;
-            case 3: createNewUserAccount(); break;
-            case 4: editUserInformation(); break;
-            case 5: resetUserPassword(); break;
-            case 6: viewUserWalletDetails(); break;
+            case 3: editUserInformation(); break;
+            case 4: resetUserPassword(); break;
+            case 5: viewUserWalletDetails(); break;
             case 0: return;
         }
     }
