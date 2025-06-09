@@ -1661,33 +1661,30 @@ void UserInterface::editUserInformation() {
     
     switch (choice) {
         case 1: {
-            std::string fullName = getValidatedInput(
-                "Full name( contain only alphabetic characters and < 30 characters):",
-                UserValidator::isValidFullName,
-                "Invalid full name! Full name must contain only alphabetic characters and be less than 30 characters long."
-            );
-            if (fullName.empty()) return;
-            user->setFullName(fullName);
+            std::cout << "\n Enter new full name: ";
+            std::string newName;
+            std::getline(std::cin, newName);
+            if (!newName.empty()) {
+                user->setFullName(newName);
+            }
             break;
         }
         case 2: {
-            std::string email = getValidatedInput(
-                "Email: ",
-                UserValidator::isValidEmail,
-                "Invalid email format! Please enter a valid email."
-            );
-            if (email.empty()) break;
-            user->setEmail(email);
+            std::cout << "\n Enter new email: ";
+            std::string newEmail;
+            std::getline(std::cin, newEmail);
+            if (!newEmail.empty()) {
+                user->setEmail(newEmail);
+            }
             break;
         }
         case 3: {
-            std::string phoneNumber = getValidatedInput(
-                "Phone number (10-11 digits): ",
-                UserValidator::isValidPhoneNumber,
-                "Invalid phone number format! Please enter a valid phone number."
-            );
-            if (phoneNumber.empty()) break;
-            user->setPhoneNumber(phoneNumber);
+            std::cout << "\n Enter new phone number: ";
+            std::string newPhone;
+            std::getline(std::cin, newPhone);
+            if (!newPhone.empty()) {
+                user->setPhoneNumber(newPhone);
+            }
             break;
         }
         case 0:
