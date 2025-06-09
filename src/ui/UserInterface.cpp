@@ -422,9 +422,6 @@ void UserInterface::changePassword() {
         pauseScreen();
         return;
     }
-
-    showInfo("Your OTP code is: " + otpCode);
-    showInfo("(In reality, this code would be sent via email/SMS)");
     
     // Confirm password change details
     std::cout << "\n" << "=== CONFIRM PASSWORD CHANGE ===\n";
@@ -496,9 +493,6 @@ void UserInterface::updateProfile() {
         pauseScreen();
         return;
     }
-
-    showInfo("Your OTP code is: " + otpCode);
-    showInfo("(In reality, this code would be sent via email/SMS)");
     
     std::string inputOTP = getInput("Enter OTP code: ");
     if (inputOTP.empty()) return;
@@ -606,8 +600,6 @@ void UserInterface::transferPoints() {
         return;
     }
 
-    showInfo("Your OTP code is: " + otpCode);
-    showInfo("(In reality, this code would be sent via email/SMS)");    // Confirm transaction details
     std::cout << "\n" << "=== CONFIRM TRANSACTION ===\n";
     std::cout << "From: " << user->getFullName() << "\n";
     std::cout << "To: " << recipient->getFullName() << "\n";
@@ -936,9 +928,6 @@ void UserInterface::issuePointsFromMaster() {
         pauseScreen();
         return;
     }
-
-    showInfo("Your OTP code is: " + otpCode);
-    showInfo("(In reality, this code would be sent via email/SMS)");
 
     // Confirm transaction details
     std::cout << "\n" << "=== CONFIRM POINT ISSUANCE ===\n";
