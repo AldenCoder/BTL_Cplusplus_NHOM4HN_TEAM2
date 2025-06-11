@@ -86,10 +86,6 @@ public:
     bool saveUser(std::shared_ptr<User> user);
 
 private:
-    std::string validateRegistrationData(const std::string& username,
-                                        const std::string& email,
-                                        const std::string& phoneNumber);
-
     std::shared_ptr<User> loadUserToCache(const std::string& username);
     void removeUserFromCache(const std::string& username);
 };
