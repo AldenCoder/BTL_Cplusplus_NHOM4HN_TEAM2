@@ -15,16 +15,13 @@ WalletManager::WalletManager(std::shared_ptr<DatabaseManager> dataManager,
 
 bool WalletManager::initialize() {
     try {
-        // Initialize master wallet
         masterWallet = std::unique_ptr<MasterWallet>(new MasterWallet(10000000.0)); // 10 million initial points
-        
-        // Load all wallets from storage into cache
+
         auto wallets = dataManager->loadAllWallets();
         
         for (auto& wallet : wallets) {
             if (wallet) {
                 std::string walletId = wallet->getId();
-                // Wallet is already shared_ptr from DatabaseManager
                 walletCache[walletId] = wallet;
             }
         }
@@ -39,21 +36,15 @@ bool WalletManager::initialize() {
 
 bool WalletManager::createUserWallet(const std::string& userId, const std::string& walletId) {
     try {
-        // Kiểm tra ví đã tồn tại chưa
         if (walletExists(walletId)) {
             return false;
         }
-        
-        // Tạo ví mới với số điểm khởi tạo
-        auto wallet = std::shared_ptr<Wallet>(new Wallet(walletId, userId, INITIAL_USER_POINTS));
-        // ID is already set in constructor
 
-        // Lưu vào storage
+        auto wallet = std::shared_ptr<Wallet>(new Wallet(walletId, userId, INITIAL_USER_POINTS));
+
         if (dataManager->saveWallet(wallet)) {
-            // Thêm vào cache
             walletCache[walletId] = wallet;
-            
-            // Lấy master wallet ID thực tế để ghi log giao dịch phát hành điểm ban đầu
+
             std::string masterWalletId = dataManager->getMasterWalletId();
             if (!masterWalletId.empty()) {
                 Transaction initTransaction(
@@ -82,26 +73,22 @@ bool WalletManager::createUserWallet(const std::string& userId, const std::strin
 }
 
 std::shared_ptr<Wallet> WalletManager::getWallet(const std::string& walletId) {
-    // Kiểm tra cache trước
     auto it = walletCache.find(walletId);
     if (it != walletCache.end()) {
         return it->second;
     }
 
-    // Tải từ storage
     return loadWalletToCache(walletId);
 }
 
 std::shared_ptr<Wallet> WalletManager::getWalletByUserId(const std::string& userId) {
     try {
-        // Tìm trong cache trước
         for (const auto& pair : walletCache) {
             if (pair.second->getOwnerId() == userId) {
                 return pair.second;
             }
         }
 
-        // Tải từ storage
         auto wallet = dataManager->loadWalletByOwnerId(userId);
         if (wallet) {
             walletCache[wallet->getId()] = wallet;
@@ -115,12 +102,10 @@ std::shared_ptr<Wallet> WalletManager::getWalletByUserId(const std::string& user
 }
 
 TransferResult WalletManager::transferPoints(const TransferRequest& request) {
-    // std::lock_guard<std::mutex> lock(transferMutex); // Thread-safe - disabled for MinGW
     
     TransferResult result;
     result.success = false;
 
-    // Xác thực yêu cầu
     std::string validationError = validateTransferRequest(request);
     if (!validationError.empty()) {
         result.message = validationError;
@@ -128,32 +113,28 @@ TransferResult WalletManager::transferPoints(const TransferRequest& request) {
     }
 
     try {
-        // Lấy ví gửi và nhận
         auto fromWallet = getWallet(request.fromWalletId);
         auto toWallet = getWallet(request.toWalletId);
 
         if (!fromWallet || !toWallet) {
             result.message = "Wallet not found.!";
             return result;
-        }        // Kiểm tra ví có bị khóa không
+        }
         if (fromWallet->getIsLocked() || toWallet->getIsLocked()) {
             result.message = "The wallet has been locked!";
             return result;
         }
 
-        // Kiểm tra số dư
         if (fromWallet->getBalance() < request.amount) {
             result.message = "Insufficient balance!";
             return result;
         }
 
-        // Xác thực OTP
         if (!otpManager->verifyOTP(fromWallet->getOwnerId(), request.otpCode, OTPType::TRANSFER)) {
             result.message = "The OTP code is incorrect or has expired!";
             return result;
         }
 
-        // Thực hiện giao dịch atomic
         std::string transactionId = executeAtomicTransfer(
             fromWallet, toWallet, request.amount, request.description);
 
@@ -163,7 +144,6 @@ TransferResult WalletManager::transferPoints(const TransferRequest& request) {
             result.transactionId = transactionId;
             result.newBalance = fromWallet->getBalance();
 
-            // Lưu vào storage
             dataManager->saveWallet(fromWallet);
             dataManager->saveWallet(toWallet);
         } else {
@@ -181,7 +161,6 @@ std::string WalletManager::generateTransferOTP(const std::string& fromUserId,
                                               const std::string& toWalletId,
                                               double amount) {
     try {
-        // Tạo OTP với thông tin giao dịch
         std::string otpData = fromUserId + "|" + toWalletId + "|" + std::to_string(amount);
         return otpManager->generateOTP(fromUserId, OTPType::TRANSFER);
     }
@@ -206,14 +185,12 @@ std::vector<Transaction> WalletManager::getTransactionHistory(const std::string&
     }
 
     auto allTransactions = wallet->getTransactionHistory();
-    
-    // Sắp xếp theo thời gian mới nhất
+
     std::sort(allTransactions.begin(), allTransactions.end(),
               [](const Transaction& a, const Transaction& b) {
                   return a.getTimestamp() > b.getTimestamp();
               });
 
-    // Gioi han so luong neu can
     if (limit > 0 && allTransactions.size() > static_cast<size_t>(limit)) {
         allTransactions.resize(limit);
     }
@@ -250,7 +227,6 @@ std::vector<std::string> WalletManager::findWalletsByOwner(const std::string& ow
             }
         }
 
-        // Nếu không tìm thấy trong cache, tìm trong storage
         if (walletIds.empty()) {
             auto wallet = dataManager->loadWalletByOwnerId(ownerId);
             if (wallet) {
@@ -290,7 +266,6 @@ std::string WalletManager::issuePointsFromMaster(const std::string& adminUserId,
                                                 double amount,
                                                 const std::string& description,
                                                 const std::string& otpCode) {
-    // std::lock_guard<std::mutex> lock(transferMutex); // disabled for MinGW
     
     try {
         // Verify OTP first
@@ -304,20 +279,17 @@ std::string WalletManager::issuePointsFromMaster(const std::string& adminUserId,
             return "";
         }
 
-        // Lấy master wallet ID thực tế (ví của user đăng nhập lần đầu)
         std::string masterWalletId = dataManager->getMasterWalletId();
         if (masterWalletId.empty()) {
             std::cerr << "[ERROR] Cannot find master wallet ID!" << std::endl;
             return "";
         }
 
-        // Kiểm tra ví tổng có đủ điểm không
         if (!masterWallet->hasEnoughPoints(amount)) {
             std::cerr << "[ERROR] Master wallet insufficient balance!" << std::endl;
             return "";
         }
 
-        // Sử dụng atomic transfer với database để đảm bảo ACID compliance
         std::string transactionId = dataManager->transferPointsWithId(
             masterWalletId,
             toWalletId,
@@ -326,13 +298,10 @@ std::string WalletManager::issuePointsFromMaster(const std::string& adminUserId,
         );
 
         if (!transactionId.empty()) {
-            // Update master wallet object trong memory
             masterWallet->transferOut(amount);
-            
-            // Update recipient wallet object trong memory
+
             toWallet->deposit(amount);
-            
-            // Create transaction object to add to wallet history
+
             Transaction transaction(
                 transactionId,
                 masterWalletId,
@@ -362,8 +331,7 @@ std::string WalletManager::issuePointsFromMaster(const std::string& adminUserId,
 std::string WalletManager::getSystemStatistics() {
     try {
         std::ostringstream stats;
-        
-        // Thống kê tổng quan
+
         int totalWallets = walletCache.size();
         double totalPoints = 0.0;
         int activeWallets = 0;
@@ -396,9 +364,7 @@ bool WalletManager::confirmPendingTransaction(const std::string& transactionId,
                                             const std::string& otpCode) {
     (void)transactionId; // Suppress warning - reserved for future pending transaction feature
     (void)otpCode;       // Suppress warning - reserved for future OTP verification
-    
-    // Tính năng này có thể được mở rộng cho giao dịch đang chờ xử lý
-    // Hiện tại hệ thống xử lý giao dịch ngay lập tức
+
     return false;
 }
 
@@ -406,8 +372,7 @@ bool WalletManager::cancelPendingTransaction(const std::string& transactionId,
                                            const std::string& reason) {
     (void)transactionId; // Suppress warning - reserved for future pending transaction feature
     (void)reason;        // Suppress warning - reserved for future cancellation reason logging
-    
-    // Tính năng này có thể được mở rộng cho giao dịch đang chờ xử lý
+
     return false;
 }
 
@@ -451,7 +416,6 @@ void WalletManager::removeWalletFromCache(const std::string& walletId) {
 }
 
 std::string WalletManager::validateTransferRequest(const TransferRequest& request) {
-    // Kiểm tra số điểm
     if (request.amount <= 0) {
         return "So diem phai lon hon 0!";
     }
@@ -460,17 +424,14 @@ std::string WalletManager::validateTransferRequest(const TransferRequest& reques
         return "So diem vuot qua gioi han cho phep!";
     }
 
-    // Kiểm tra ví gửi và nhận khác nhau
     if (request.fromWalletId == request.toWalletId) {
         return "Khong the chuyen diem cho chinh minh!";
     }
 
-    // Kiểm tra OTP
     if (request.otpCode.empty()) {
         return "Can ma OTP de xac thuc giao dich!";
     }
 
-    // Kiểm tra mô tả
     if (request.description.empty()) {
         return "Can co mo ta cho giao dich!";
     }
@@ -483,9 +444,6 @@ std::string WalletManager::executeAtomicTransfer(std::shared_ptr<Wallet> fromWal
                                                double amount,
                                                const std::string& description) {
     try {
-        // Use database-level atomic transfer instead of application-level
-        // This ensures the entire process (balance updates + transaction logging) 
-        // happens within a single database transaction
         std::string transactionId = dataManager->transferPointsWithId(
             fromWallet->getId(), 
             toWallet->getId(), 
@@ -494,11 +452,9 @@ std::string WalletManager::executeAtomicTransfer(std::shared_ptr<Wallet> fromWal
         );
         
         if (!transactionId.empty()) {
-            // Update wallet objects in memory to sync with database
             fromWallet->withdraw(amount);
             toWallet->deposit(amount);
-            
-            // Create transaction objects to add to wallet history (using same transaction ID)
+
             Transaction fromTransaction(
                 transactionId,
                 fromWallet->getId(),
@@ -518,12 +474,10 @@ std::string WalletManager::executeAtomicTransfer(std::shared_ptr<Wallet> fromWal
                 TransactionStatus::COMPLETED,
                 description
             );
-            
-            // Add to wallet history
+
             fromWallet->addTransaction(fromTransaction);
             toWallet->addTransaction(toTransaction);
-            
-            // Log transaction
+
             logTransaction(fromTransaction, "COMPLETED", "Transfer executed successfully");
             
             return transactionId;
@@ -542,11 +496,9 @@ void WalletManager::rollbackTransfer(std::shared_ptr<Wallet> fromWallet,
                                    double amount,
                                    const std::string& transactionId) {
     try {
-        // Hoàn tác giao dịch
         toWallet->withdraw(amount);
         fromWallet->deposit(amount);
 
-        // Tạo giao dịch rollback
         Transaction rollbackTransaction(
             SecurityUtils::generateUUID(),
             "SYSTEM",
@@ -571,8 +523,6 @@ void WalletManager::logTransaction(const Transaction& transaction,
                                  const std::string& status,
                                  const std::string& message) {
     try {
-        // Ghi log vào file hoặc database
-        // Hiện tại chỉ ghi ra console
         std::cout << "[TRANSACTION LOG] " 
                   << "ID: " << transaction.getId()
                   << ", Status: " << status
